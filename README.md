@@ -4,7 +4,7 @@
 
 GridPulse is a MEVN-based platform for multi-site energy monitoring, demand forecasting, energy optimization, renewable asset visibility, and demand-response workflows.
 
-> **Project status:** Implemented foundations include Express/Mongoose configuration, authentication with rotating refresh sessions, organization membership and role checks, facility and meter management, tenant-scoped energy-reading ingestion/query APIs, and a tenant-scoped energy overview analytics endpoint. The frontend now includes registration/login, refresh-cookie session restoration, organization selection, logout, and tenant-scoped live analytics loading. Empty telemetry states are shown explicitly; no synthetic production metrics are presented. Explainable forecasting, anomaly detection, rolling-origin model evaluation, advisory energy optimization, solar/demand-response scenarios, enterprise energy reporting, facility-specific tariffs and bill estimates, audited CSV meter imports, and actual-versus-estimated utility invoice reconciliation are implemented. Direct utility/gateway provider connectors, scheduled polling, invoice OCR, settlement, and production hardening remain planned.
+> **Project status:** Implemented foundations include Express/Mongoose configuration, authentication with rotating refresh sessions, organization membership and role checks, facility and meter management, tenant-scoped energy-reading ingestion/query APIs, and a tenant-scoped energy overview analytics endpoint. The frontend now includes registration/login, refresh-cookie session restoration, organization selection, logout, and tenant-scoped live analytics loading. Empty telemetry states are shown explicitly; no synthetic production metrics are presented. Explainable forecasting, anomaly detection, rolling-origin model evaluation, advisory energy optimization, solar/demand-response scenarios, enterprise energy reporting, facility-specific tariffs and bill estimates, audited CSV meter imports, actual-versus-estimated utility invoice reconciliation, and signed generic IoT gateway webhooks are implemented. Vendor-specific utility/IoT connectors, scheduled polling, invoice OCR, settlement, and production hardening remain planned.
 
 ## Product goals
 
@@ -102,6 +102,11 @@ All endpoints are prefixed with `/api/v1`.
 | GET | `/organizations/:organizationId/integrations/meter-imports` | Organization member | List import batches and ingestion outcomes |
 | POST | `/organizations/:organizationId/integrations/utility-invoices/reconcile` | Owner/admin/operator/analyst | Record an actual utility invoice and compare it with a fresh tariff-based estimate |
 | GET | `/organizations/:organizationId/integrations/utility-invoices` | Organization member | List utility invoice reconciliation records |
+| GET | `/organizations/:organizationId/integrations/gateways` | Organization member | List gateway sources, meter mappings, counters and freshness health |
+| POST | `/organizations/:organizationId/integrations/gateways` | Owner/admin/operator | Provision a signed webhook source and one-time signing secret |
+| POST | `/organizations/:organizationId/integrations/gateways/:sourceId/rotate-secret` | Owner/admin/operator | Immediately rotate a gateway signing secret |
+| PATCH | `/organizations/:organizationId/integrations/gateways/:sourceId/status` | Owner/admin/operator | Enable or disable a gateway source |
+| POST | `/integrations/gateways/:sourceId/readings` | HMAC-signed gateway | Receive up to 500 signed telemetry events |
 
 ### Facility example
 
@@ -268,6 +273,68 @@ Example request body for the CSV endpoint:
 
 This is a manual invoice-data entry and reconciliation workflow, not a direct utility-provider API integration, automated scheduled meter polling, OCR invoice extraction, payment system, or accounting ledger. CSV ingestion is user-initiated; the audit records provide the foundation for later gateway adapters, scheduled synchronization, and exception notifications. Imported meter data is not silently treated as verified utility data. Review source records and supplier invoice details before acting on discrepancies.
 
+
+### Live IoT gateway webhooks
+
+The **Live IoT gateway connection** panel provisions a generic signed webhook source. It is a provider-neutral adapter contract that can be implemented by an edge gateway, site controller, or upstream telemetry service.
+
+**Provisioning and credentials**
+- An owner/admin/operator creates a source, maps external meter IDs to active meters in the same organization, and sets an expected reporting interval (1–1,440 minutes).
+- GridPulse generates a 256-bit random signing secret and returns it only at creation or explicit rotation. Store it in the gateway's secret manager; it cannot be retrieved from the API later.
+- Secrets are encrypted at rest with AES-256-GCM. Configure `INTEGRATION_ENCRYPTION_KEY` as a persistent, private value of at least 32 characters. The application derives a 256-bit encryption key from it. Do not change or lose this key without first migrating/re-encrypting all configured gateway credentials; losing it makes existing sources unable to authenticate.
+- Rotation immediately invalidates the previous secret. Disable a source to reject its incoming events without deleting its audit history.
+
+**Signed event contract**
+- Endpoint: `POST /api/v1/integrations/gateways/:sourceId/readings`.
+- Send JSON with an `events` array of 1–500 events. Each event contains `eventId`, `externalMeterId`, timezone-aware ISO `recordedAt`, and non-negative `energyKwh`. Optional fields: `demandKw`, `voltageV`, `currentA`, `powerFactor`, and `quality`.
+- Include `X-GridPulse-Timestamp` (Unix seconds) and `X-GridPulse-Signature` headers. Signature is `sha256=` followed by the lowercase hex HMAC-SHA256 of `timestamp + "." + exact raw JSON request body`, using the provisioned signing secret as the UTF-8 HMAC key.
+- Signed timestamps must be within five minutes of server time. The signature is compared in constant time. Re-serialize JSON only once and sign the exact bytes sent; whitespace or property-order changes invalidate the signature.
+- Each external meter ID must be mapped to an active local meter. Event IDs are idempotent within the organization/meter key. Events are stored as `source: gateway`; the API never exposes the signing secret after provisioning.
+- The response reports received, inserted and duplicate counts. Gateway health is `awaiting_data` before the first successful event, `healthy` while the last successful delivery is within three expected intervals, `stale` after that threshold, and `disabled` when the source is disabled.
+
+Example event body:
+
+```json
+{
+  "events": [
+    {
+      "eventId": "edge-01-0000451",
+      "externalMeterId": "plant-main-meter",
+      "recordedAt": "2026-11-21T10:15:00+05:30",
+      "energyKwh": 124.75,
+      "demandKw": 498.2,
+      "powerFactor": 0.96,
+      "quality": "valid"
+    }
+  ]
+}
+```
+
+Example Node.js signing logic (send `rawBody` unchanged):
+
+```js
+import { createHmac } from 'node:crypto'
+
+const timestamp = Math.floor(Date.now() / 1000).toString()
+const rawBody = JSON.stringify(payload)
+const signature = 'sha256=' + createHmac('sha256', signingSecret)
+  .update(timestamp + '.')
+  .update(rawBody)
+  .digest('hex')
+
+await fetch(webhookUrl, {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+    'X-GridPulse-Timestamp': timestamp,
+    'X-GridPulse-Signature': signature,
+  },
+  body: rawBody,
+})
+```
+
+The endpoint currently accepts provider-neutral HTTP webhooks. MQTT broker subscriptions, Modbus polling, vendor-specific cloud APIs, scheduled backfills, outbound notifications, and hardware command/control are not implemented. Gateway health is a freshness indicator in the workspace, not a guaranteed delivery SLA or an alert delivery service.
+
 ### Continuous integration
 
 GitHub Actions runs the backend Node.js test suite and Vue/TypeScript production build on pushes and pull requests targeting `main`. The workflow installs workspace dependencies with Node.js 22. A successful workflow is required before treating a change as build-verified.
@@ -298,7 +365,7 @@ Roles available: `owner`, `admin`, `operator`, `analyst`, and `viewer`. All memb
 7. Renewable energy and demand-response advisory simulation — initial implementation complete; metered exports, settlement, and production integration remain.
 8. Enterprise energy reporting with CSV and print-to-PDF exports — initial implementation complete; formal emissions inventory, audit controls, and compliance workflows remain.
 9. Facility-specific tariff versioning, time-of-use cost calculation, demand charges, saved bill estimates, period comparisons, and CSV exports — initial implementation complete; utility integrations, invoice settlement, and jurisdiction-specific tariff rules remain.
-10. Meter CSV batch ingestion with content-fingerprinted idempotency, import audit history, and actual utility invoice reconciliation — initial implementation complete; direct provider connectors, scheduled polling, OCR, and automated alerts remain.
+10. Meter CSV batch ingestion, invoice reconciliation, encrypted gateway secrets, signed webhook telemetry, and source freshness monitoring — initial implementation complete; vendor-specific connectors, scheduled polling, notifications, and protocol adapters remain.
 11. Production hardening, observability, and integration testing.
 
 ## Security
