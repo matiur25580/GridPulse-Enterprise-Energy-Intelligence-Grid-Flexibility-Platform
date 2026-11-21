@@ -21,11 +21,15 @@ const chartData = computed(() => {
   const forecast = result.value?.forecast.forecast ?? []
   const labels = [...history.map(x => x.date), ...forecast.map(x => x.date)]
   const actual = [...history.map(x => x.energyKwh), ...forecast.map(() => null)]
-  const predicted = [...history.map(() => null), ...(forecast.length ? [history.length ? history[history.length - 1].energyKwh : null, ...forecast.map(x => x.energyKwh)] : [])]
-  const lower = [...history.map(() => null), ...(forecast.length ? [history.length ? history[history.length - 1].energyKwh : null, ...forecast.map(x => x.lowerKwh)] : [])]
-  const upper = [...history.map(() => null), ...(forecast.length ? [history.length ? history[history.length - 1].energyKwh : null, ...forecast.map(x => x.upperKwh)] : [])]
-  const allLabels = forecast.length ? [...labels.slice(0, history.length), ...(history.length ? [history[history.length - 1].date] : []), ...forecast.map(x => x.date)] : labels
-  return { labels: allLabels, actual: forecast.length && history.length ? [...actual.slice(0, history.length - 1), history[history.length - 1].energyKwh, ...actual.slice(history.length)] : actual, predicted, lower, upper }
+  const predicted = [...history.map(() => null), ...forecast.map(x => x.energyKwh)]
+  const lower = [...history.map(() => null), ...forecast.map(x => x.lowerKwh)]
+  const upper = [...history.map(() => null), ...forecast.map(x => x.upperKwh)]
+  if (history.length && forecast.length) {
+    predicted[history.length - 1] = history[history.length - 1].energyKwh
+    lower[history.length - 1] = history[history.length - 1].energyKwh
+    upper[history.length - 1] = history[history.length - 1].energyKwh
+  }
+  return { labels, actual, predicted, lower, upper }
 })
 const forecastOption = computed(() => ({
   tooltip: { trigger: 'axis', valueFormatter: (v: number | null) => v == null ? '—' : format(v, 2) + ' kWh' },
@@ -78,7 +82,7 @@ onMounted(load)
       </div>
       <article class="intelligence-panel">
         <div class="intelligence-panel-head"><div><h3>Observed consumption &amp; forecast</h3><p>Daily portfolio energy · UTC aggregation · estimated band shown as dotted bounds</p></div><span class="intelligence-updated">UPDATED {{ updatedAt }}</span></div>
-        <VChart v-if="result.history.length || result.forecast.forecast.length" class="intelligence-chart" :option="forecastOption" autoresize />
+        <VChart v-if="result.history.length" class="intelligence-chart" :option="forecastOption" autoresize />
         <div v-else class="intelligence-state">Not enough telemetry to plot a forecast. Ingest valid or estimated readings to begin.</div>
         <p class="intelligence-method">{{ result.forecast.methodology }}</p>
       </article>
