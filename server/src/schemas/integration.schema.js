@@ -16,6 +16,7 @@ export const listImportsQuerySchema = z.object({
   meterId: objectId.optional(),
   limit: z.coerce.number().int().min(1).max(100).default(25),
 })
+export const listInvoicesQuerySchema = z.object({ facilityId: objectId.optional(), limit: z.coerce.number().int().min(1).max(100).default(25) })
 export const reconcileInvoiceSchema = z.object({
   facilityId: objectId,
   tariffId: objectId,
