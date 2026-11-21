@@ -58,6 +58,35 @@ export const organizationApi = {
   analytics: (organizationId: string, from: string, to: string) =>
     apiRequest<EnergyOverview>(`/organizations/${encodeURIComponent(organizationId)}/analytics/overview?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}`),
 }
+
+export interface IntelligenceHistoryPoint { date: string; energyKwh: number; readingCount: number }
+export interface IntelligenceForecastPoint { date: string; energyKwh: number; lowerKwh: number; upperKwh: number }
+export interface EnergyAnomaly {
+  meterId: string
+  facilityId: string
+  date: string
+  energyKwh: number
+  baselineKwh: number
+  thresholdKwh: number
+  severity: 'high' | 'medium'
+  deviationRatio: number
+  method: string
+  meter: { id: string; name: string; serialNumber: string } | null
+}
+export interface EnergyIntelligence {
+  range: { from: string; to: string }
+  generatedAt: string
+  history: IntelligenceHistoryPoint[]
+  forecast: { model: string; methodology: string; historyCount: number; baselineDailyKwh: number; dailyTrendKwh: number; forecast: IntelligenceForecastPoint[] }
+  anomalies: EnergyAnomaly[]
+  anomalySummary: { count: number; high: number; medium: number }
+  dataQuality: { included: string; excluded: string; historyDays: number; horizonDays: number }
+}
+export const intelligenceApi = {
+  overview: (organizationId: string, historyDays = 30, horizonDays = 7) =>
+    apiRequest<EnergyIntelligence>(`/organizations/${encodeURIComponent(organizationId)}/analytics/intelligence?historyDays=${historyDays}&horizonDays=${horizonDays}`),
+}
+
 export interface User { id: string; name: string; email: string }
 export interface Organization { id: string; name: string; slug: string; role: string }
 export interface EnergyOverview {
