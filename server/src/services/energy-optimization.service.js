@@ -18,19 +18,18 @@ export function simulateEnergyOptimization(hourlyProfile, input) {
     return { hour, energyKwh, baselineDemandKw: demandKw, rate, isPeak, chargeKwh: 0, dischargeKwh: 0 }
   })
 
-  // Charge during the cheapest hours first; discharge only in configured peak windows.
+  // Dispatch chronologically so energy charged later in the day cannot serve an earlier peak.
   if (batteryEnabled) {
-    const chargeHours = hours.filter((item) => !item.isPeak).sort((a, b) => a.rate - b.rate || a.hour - b.hour)
-    for (const item of chargeHours) {
-      const availableInput = Math.min(input.batteryPowerKw, (capacity - stateOfCharge) / oneWayEfficiency)
-      item.chargeKwh = Math.max(0, availableInput)
-      stateOfCharge += item.chargeKwh * oneWayEfficiency
-    }
-    const dischargeHours = hours.filter((item) => item.isPeak).sort((a, b) => b.baselineDemandKw - a.baselineDemandKw || a.hour - b.hour)
-    for (const item of dischargeHours) {
-      const availableOutput = Math.min(input.batteryPowerKw, Math.max(0, stateOfCharge - reserve) * oneWayEfficiency)
-      item.dischargeKwh = Math.min(item.energyKwh, Math.max(0, availableOutput))
-      stateOfCharge -= item.dischargeKwh / oneWayEfficiency
+    for (const item of hours) {
+      if (!item.isPeak) {
+        const availableInput = Math.min(input.batteryPowerKw, (capacity - stateOfCharge) / oneWayEfficiency)
+        item.chargeKwh = Math.max(0, availableInput)
+        stateOfCharge += item.chargeKwh * oneWayEfficiency
+      } else {
+        const availableOutput = Math.min(input.batteryPowerKw, Math.max(0, stateOfCharge - reserve) * oneWayEfficiency)
+        item.dischargeKwh = Math.min(item.energyKwh, Math.max(0, availableOutput))
+        stateOfCharge -= item.dischargeKwh / oneWayEfficiency
+      }
     }
   }
 
