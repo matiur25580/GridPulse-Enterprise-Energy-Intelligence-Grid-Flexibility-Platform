@@ -85,6 +85,7 @@ All endpoints are prefixed with `/api/v1`.
 | POST | `/organizations/:organizationId/meters` | Owner/admin/operator | Register a meter |
 | POST | `/organizations/:organizationId/meters/:meterId/readings` | Owner/admin/operator | Ingest up to 1,000 readings |
 | GET | `/organizations/:organizationId/meters/:meterId/readings` | Organization member | Query readings with optional `from`, `to`, `page`, and `limit` |
+| GET | `/organizations/:organizationId/analytics/overview` | Organization member | Portfolio KPIs, daily usage, facility breakdown, and data-quality counts |
 
 ### Facility example
 
