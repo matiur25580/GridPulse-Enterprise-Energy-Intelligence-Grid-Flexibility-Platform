@@ -1,5 +1,6 @@
 import mongoose from 'mongoose'
 import { GatewaySource } from '../models/gateway-source.model.js'
+import { Organization } from '../models/organization.model.js'
 import { env } from '../config/env.js'
 import { AppError } from '../utils/app-error.js'
 import { asyncHandler } from '../utils/async-handler.js'
@@ -9,6 +10,8 @@ export const verifyGatewaySignature = asyncHandler(async (request, _response, ne
   if (!mongoose.isValidObjectId(request.params.sourceId)) throw new AppError('Gateway source not found.', 404, 'GATEWAY_SOURCE_NOT_FOUND')
   const source = await GatewaySource.findById(request.params.sourceId).select('+secretCiphertext +secretIv +secretTag')
   if (!source || source.status !== 'active') throw new AppError('Gateway source is unavailable.', 404, 'GATEWAY_SOURCE_NOT_FOUND')
+  const organization = await Organization.findOne({ _id: source.organization, status: 'active' }).select('_id').lean()
+  if (!organization) throw new AppError('Gateway source is unavailable.', 404, 'GATEWAY_SOURCE_NOT_FOUND')
   const timestamp = request.get('x-gridpulse-timestamp')
   const signature = request.get('x-gridpulse-signature')
   const seconds = Number(timestamp)
