@@ -15,6 +15,7 @@ import billingRoutes from './routes/billing.routes.js'
 import integrationRoutes from './routes/integration.routes.js'
 import gatewayRoutes from './routes/gateway.routes.js'
 import alertsRoutes from './routes/alerts.routes.js'
+import alertNotificationsRoutes from './routes/alert-notifications.routes.js'
 import { errorHandler, notFoundHandler } from './middleware/error-handler.js'
 
 export const app = express()
@@ -36,6 +37,7 @@ app.get('/api/v1/health', (_request, response) => {
 app.use('/api/v1', gatewayRoutes)
 app.use('/api/v1/auth', authRoutes)
 app.use('/api/v1/organizations', alertsRoutes)
+app.use('/api/v1/organizations', alertNotificationsRoutes)
 app.use('/api/v1/organizations', integrationRoutes)
 app.use('/api/v1/organizations', billingRoutes)
 app.use('/api/v1/organizations', reportRoutes)
