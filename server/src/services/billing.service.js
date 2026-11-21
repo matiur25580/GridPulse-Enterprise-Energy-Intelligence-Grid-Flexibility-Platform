@@ -86,10 +86,11 @@ export function calculateCosts(rows, tariff) {
     readingCount += row.readingCount
     estimatedReadings += row.estimatedReadings
     potentialShiftSavings += row.energyKwh * 0.1 * Math.max(0, rate - lowestRate)
-    const daily = dailyMap.get(row._id.date) ?? { date: row._id.date, energyKwh: 0, energyCharge: 0, demandKw: null, readingCount: 0 }
+    const daily = dailyMap.get(row._id.date) ?? { date: row._id.date, energyKwh: 0, energyCharge: 0, demandKw: null, demandIncomplete: false, readingCount: 0 }
     daily.energyKwh += row.energyKwh
     daily.energyCharge += charge
-    daily.demandKw = row.peakDemandKw == null ? daily.demandKw : Math.max(daily.demandKw ?? 0, row.peakDemandKw)
+    if (row.peakDemandKw == null) daily.demandIncomplete = true
+    else daily.demandKw = Math.max(daily.demandKw ?? 0, row.peakDemandKw)
     daily.readingCount += row.readingCount
     dailyMap.set(row._id.date, daily)
   }
@@ -99,11 +100,11 @@ export function calculateCosts(rows, tariff) {
   const subtotal = energyCharge + demandCharge + fixedCharge
   const tax = subtotal * tariff.taxRatePercent / 100
   const total = subtotal + tax
-  const daily = [...dailyMap.values()].map((item) => ({
+  const daily = [...dailyMap.values()].map(({ demandIncomplete, ...item }) => ({
     ...item,
     energyKwh: round(item.energyKwh),
     energyCharge: round(item.energyCharge),
-    demandKw: item.demandKw == null ? null : round(item.demandKw),
+    demandKw: demandIncomplete || item.demandKw == null ? null : round(item.demandKw),
   }))
   return {
     summary: {
@@ -124,7 +125,7 @@ export function calculateCosts(rows, tariff) {
     ],
     daily,
     insights: [
-      ...(tariff.demandChargePerKw > 0 && incompleteDemandHours > 0 ? ['Demand charges are configured, but measured kW coverage is incomplete for ' + incompleteDemandHours + ' observed hour buckets; no demand charge was estimated.'] : []),
+      ...(tariff.demandChargePerKw > 0 && (incompleteDemandHours > 0 || peakDemandKw == null) ? [incompleteDemandHours > 0 ? 'Demand charges are configured, but measured kW coverage is incomplete for ' + incompleteDemandHours + ' observed hour buckets; no demand charge was estimated.' : 'Demand charges are configured, but no eligible measured kW telemetry exists; no demand charge was estimated.'] : []),
       ...(estimatedReadings ? [estimatedReadings + ' estimated-quality readings are included in the estimate.'] : []),
       ...(potentialShiftSavings > 0 ? ['Illustrative load-shifting opportunity: shifting 10% of energy used in higher-priced periods to the lowest configured rate could save about ' + round(potentialShiftSavings) + ' ' + tariff.currency + ' before battery losses and operational constraints.'] : []),
     ],
