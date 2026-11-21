@@ -45,3 +45,10 @@ test('does not discharge below the configured reserve', () => {
   })
   assert.ok(result.optimized.endingStateOfChargeKwh >= 5)
 })
+
+test('does not use energy charged later to serve an earlier peak', () => {
+  const result = simulateEnergyOptimization([{ hour: 0, energyKwh: 20, demandKw: 20 }], {
+    ...input, peakHours: [0], initialSocPercent: 20, reserveSocPercent: 10,
+  })
+  assert.ok(result.optimized.batteryDischargeKwh <= 2)
+})
