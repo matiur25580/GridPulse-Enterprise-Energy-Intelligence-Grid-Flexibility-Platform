@@ -6,14 +6,15 @@
 
 GridPulse is a multi-tenant energy operations and intelligence platform for organizations managing facilities, electricity meters, renewable generation, tariffs, and flexible energy assets. It brings portfolio visibility, telemetry ingestion, explainable demand intelligence, tariff-aware scenario planning, sustainability reporting, invoice reconciliation, secure gateway integration, and incident operations into one workspace.
 
-> **Product status:** This repository contains a working full-stack implementation across the modules described below. Forecasting and optimization are transparent baseline models and advisory simulations—not autonomous controls or certified utility calculations. Automated alert evaluation is available through a configurable server-side worker. Vendor-specific utility connectors, external notification delivery, formal compliance certification, and production-scale validation remain roadmap items. See the limitations section before interpreting modeled outputs.
+> **Product status:** This repository contains a working full-stack implementation across the modules described below. Forecasting and optimization are transparent baseline models and advisory simulations—not autonomous controls or certified utility calculations. Automated alert evaluation is available through a configurable server-side worker, and incident email delivery uses a durable MongoDB outbox with a Resend adapter. A repeatable synthetic demonstration tenant and authenticated Playwright screenshot workflow make product evaluation reproducible. Vendor-specific utility connectors, formal compliance certification, and production-scale validation remain roadmap items. See the limitations section before interpreting modeled outputs.
 
 ## Contents
 
 1. [Product vision](#product-vision)
 2. [Why GridPulse stands out](#why-gridpulse-stands-out)
 3. [Dashboard gallery](#dashboard-gallery)
-4. [Capabilities](#capabilities)
+4. [Demo environment and browser screenshots](#demo-environment-and-browser-screenshots)
+5. [Capabilities](#capabilities)
 5. [User journeys](#user-journeys)
 6. [Architecture](#architecture)
 7. [Technology stack](#technology-stack)
@@ -84,7 +85,7 @@ GridPulse connects asset inventory and telemetry to analytics, planning, reporti
 
 The gallery is intentionally arranged in a **single column** so each workspace preview can be read at presentation size.
 
-**Visual provenance:** These 12 assets are polished, hand-authored SVG interface previews based on the current GridPulse visual language and implemented product modules. They use synthetic sample values to demonstrate layout and information hierarchy. They are **illustrative previews, not pixel captures from a live authenticated tenant or evidence of real customer energy data**. Replace them with browser captures from a seeded demo environment when one is deployed.
+**Visual provenance:** These 12 assets are polished, hand-authored SVG interface previews based on the current GridPulse visual language and implemented product modules. They use synthetic sample values to demonstrate layout and information hierarchy. They are **illustrative previews, not pixel captures from a live authenticated tenant or evidence of real customer energy data**. Phase 17 adds an opt-in seeded tenant and a Playwright Chromium workflow that captures twelve authentic screenshots from the running app; the generated PNGs are published as a downloadable workflow artifact and are not silently committed as if they were manually reviewed assets.
 
 ### 01 — Portfolio overview
 
@@ -159,6 +160,18 @@ A run-history view for scheduled and manual evaluations, execution duration, and
 <p align="center"><img src="docs/screenshots/12-incident-evaluation-audit.svg" width="100%" alt="GridPulse alert evaluation history interface preview"></p>
 
 ---
+
+## Demo environment and browser screenshots
+
+The repository includes an opt-in demo seeder for a dedicated non-production database. It creates four facilities, ten meters, sixty days of hourly synthetic telemetry, INR time-of-use tariffs, and a sample acknowledged incident. All generated readings are tagged with source `simulation`; no customer or utility data is used. The seeder is idempotent and refuses to run with `NODE_ENV=production`.
+
+Run the seed with a strong local-only password:
+
+```bash
+DEMO_SEED_EMAIL=demo@gridpulse.local DEMO_SEED_PASSWORD='Choose-A-Local-Demo-Password-2026' npm run seed:demo
+```
+
+See [docs/demo-environment.md](docs/demo-environment.md) for the complete setup, safety boundaries, data profile, and screenshot instructions. The [GridPulse demo gallery workflow](.github/workflows/demo-gallery.yml) launches an ephemeral MongoDB-backed app, signs in through the real UI, and captures twelve PNG screenshots with Playwright Chromium. Open **Actions → GridPulse demo gallery** and run the workflow; download the `gridpulse-dashboard-screenshots` artifact. Generated binary captures are intentionally delivered as a 14-day artifact rather than auto-committed to `main`.
 
 ## Capabilities
 
@@ -478,7 +491,7 @@ The exact service commands vary by operating system and MongoDB installation met
 | COOKIE_SECURE | No | false locally | Secure cookie flag; enabled automatically in production |
 | INTEGRATION_ENCRYPTION_KEY | Gateway feature | Generate with OpenSSL | Persistent key used to derive the AES-256-GCM gateway-secret encryption key |
 | ALERT_EVALUATION_INTERVAL_SECONDS | No | 300 | Scheduled alert interval; set to 0 to disable |
-| ALERT_EVALUATION_LEASE_SECONDS | No | 180 | Distributed worker lease duration; renewed while a batch is running |
+| ALERT_EVALUATION_LEASE_SECONDS | No | 180 | Distributed worker lease duration; renewed while a batch is running |\n| ALERT_NOTIFICATION_INTERVAL_SECONDS | No | 15 | Incident email outbox polling cadence; 0 disables delivery |\n| RESEND_API_KEY | Optional | — | Resend API key for incident email delivery |\n| ALERT_EMAIL_FROM | Optional | — | Verified Resend sender identity |\n| DEMO_SEED_EMAIL | Demo only | demo@gridpulse.local | Seed account email; does not affect normal runtime |\n| DEMO_SEED_PASSWORD | Demo only | Set explicitly | Local/demo seed account password; never use a production credential |
 
 **Production requirements:** use strong independently generated secrets, HTTPS, a secure cookie domain/configuration, restricted CORS origins, managed MongoDB backups, and secret-manager storage. The gateway encryption key must remain stable across deployments and be backed up securely.
 
@@ -797,7 +810,7 @@ The backend suite uses Node's built-in test runner. It includes unit tests for v
 
 ### GitHub Actions
 
-The workflow at .github/workflows/ci.yml runs on pushes and pull requests targeting main. It uses separate jobs so the frontend build still runs when backend tests fail:
+The workflow at .github/workflows/ci.yml runs on pushes and pull requests targeting main. A separate `.github/workflows/demo-gallery.yml` workflow builds an isolated synthetic tenant and captures twelve authenticated browser screenshots as a downloadable artifact. It uses separate jobs so the frontend build still runs when backend tests fail:
 
 1. Backend job: checks out the repository, installs Node.js 22 and workspace dependencies, then runs the backend test suite.
 2. Frontend job: checks out the repository, installs Node.js 22 and workspace dependencies, then runs TypeScript checks and the Vite production build.
@@ -856,7 +869,7 @@ GridPulse is an ambitious portfolio implementation, but the following boundaries
 - Utility-specific slab rates, power-factor penalties, contracted-demand ratchets, holidays, meter multipliers, export credits, arrears, and jurisdiction-specific tax rules are not fully modeled.
 - Emissions factors are user-supplied and not independently certified; reporting is not a verified GHG Protocol inventory.
 - Gateway support is a provider-neutral signed HTTP webhook contract. MQTT, Modbus, and vendor cloud connectors are not included.
-- Alert evaluation is periodic, not real-time. Email/SMS/push delivery and escalation policies are not included.
+- Alert evaluation is periodic, not real-time. Email delivery is available through the configured Resend adapter and durable outbox; SMS/push delivery, collaboration-channel adapters, quiet hours, and escalation policies are not included.
 - No feature issues physical equipment-control commands.
 - Database-backed end-to-end tests, load testing, penetration testing, and independent security review remain necessary before production claims.
 
@@ -866,9 +879,9 @@ GridPulse is an ambitious portfolio implementation, but the following boundaries
 
 | Priority | Next capability | Why it matters |
 |---|---|---|
-| P0 | Seeded demo environment and real browser-captured screenshots | Makes product evaluation reproducible and the portfolio gallery verifiable. |
+| P0 | Seeded demo environment and real browser-captured screenshots | Implemented: deterministic synthetic tenant, idempotent telemetry seed, and Playwright artifact workflow. |
 | P0 | Database-backed integration tests and tenant-isolation tests | Validates real MongoDB behavior beyond pure unit tests. |
-| P1 | Notification outbox with email and collaboration-channel adapters | Delivers incidents to the people responsible for response. |
+| P1 | Email outbox with Resend delivery adapter | Implemented for incident open/recovery/resolution; collaboration-channel adapters remain future work. |
 | P1 | Escalation policies, maintenance windows, and alert suppression | Reduces noise and improves operational workflows. |
 | P1 | Utility-provider integrations and scheduled invoice ingestion | Reduces manual reconciliation work. |
 | P1 | MQTT/Modbus edge adapters and backfill support | Expands interoperability with industrial telemetry. |
