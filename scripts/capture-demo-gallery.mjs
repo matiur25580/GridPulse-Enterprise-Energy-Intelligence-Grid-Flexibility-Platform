@@ -40,6 +40,7 @@ try {
       process.stdout.write('REPORT_RESPONSE ' + response.status() + ' ' + body.slice(0, 1200) + '\\n')
     }
   })
+
   await page.goto(baseUrl, { waitUntil: 'networkidle' })
   await page.getByLabel('Work email').fill(email)
   await page.getByLabel('Password').fill(password)
@@ -50,22 +51,13 @@ try {
   await page.locator('.alerts-workspace').waitFor({ state: 'visible' })
   await page.waitForTimeout(1800)
 
-  // Populate scenario and report panels through their real UI actions before capturing.
+  // Exercise the real scenario and report actions before capturing their result states.
   await page.getByRole('button', { name: /Run optimization scenario/ }).click()
   await page.getByRole('button', { name: /Evaluate demand response/ }).click()
   await page.getByRole('button', { name: /Generate report/ }).click()
   await page.getByRole('button', { name: /Calculate estimate/ }).click()
   await page.getByRole('button', { name: /Run evaluation/ }).click()
-  await Promise.race([
-    page.locator('.reporting-result-head').waitFor({ state: 'visible' }),
-    page.locator('.reporting-error').waitFor({ state: 'visible' }),
-  ])
-  if (await page.locator('.reporting-error').isVisible()) {
-    throw new Error('Demo report generation failed: ' + (reportResponses.at(-1)?.body || await page.locator('.reporting-error').innerText()))
-  }
-  if (!(await page.locator('.reporting-result-head').isVisible())) {
-    throw new Error('Demo report did not render successfully.')
-  }
+
   await Promise.race([
     page.locator('.reporting-result-head').waitFor({ state: 'visible' }),
     page.locator('.reporting-error').waitFor({ state: 'visible' }),
@@ -85,22 +77,16 @@ try {
     await page.waitForTimeout(250)
     if (fileName === '01-portfolio-overview.png') {
       await page.screenshot({ path: outputDirectory + '/' + fileName, fullPage: false, animations: 'disabled', caret: 'hide' })
-      process.stdout.write('Captured ' + fileName + '\\n')
-      continue
+    } else {
+      await section.screenshot({
+        path: outputDirectory + '/' + fileName,
+        animations: 'disabled',
+        caret: 'hide',
+      })
     }
-    if (fileName === '01-portfolio-overview.png') {
-      await page.screenshot({ path: outputDirectory + '/' + fileName, fullPage: false, animations: 'disabled', caret: 'hide' })
-      process.stdout.write('Captured ' + fileName + '\\n')
-      continue
-    }
-    await section.screenshot({
-      path: outputDirectory + '/' + fileName,
-      animations: 'disabled',
-      caret: 'hide',
-    })
-    process.stdout.write('Captured ' + fileName + '\n')
+    process.stdout.write('Captured ' + fileName + '\\n')
   }
-  process.stdout.write('Captured ' + captures.length + ' authentic dashboard screenshots in ' + outputDirectory + '\n')
+  process.stdout.write('Captured ' + captures.length + ' authentic dashboard screenshots in ' + outputDirectory + '\\n')
 } finally {
   await browser.close()
 }
