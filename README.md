@@ -358,7 +358,6 @@ GridPulse follows a modular MEVN architecture with explicit boundaries between H
     │       └── ci.yml
     ├── client/
     │   └── src/
-    │       ├── components/
     │       ├── services/
     │       ├── stores/
     │       ├── App.vue
@@ -400,6 +399,9 @@ GridPulse follows a modular MEVN architecture with explicit boundaries between H
     │       ├── 11-alerts-incident-command.svg
     │       └── 12-incident-evaluation-audit.svg
     ├── .env.example
+    ├── .nvmrc
+    ├── .npmrc
+    ├── SECURITY.md
     ├── package.json
     └── README.md
 
@@ -442,6 +444,7 @@ Put the generated value in INTEGRATION_ENCRYPTION_KEY. Never commit the resultin
 
     npm test
     npm run build
+    npm run check
 
 The test command runs the backend Node.js test suite. The build command runs vue-tsc and the Vite production build.
 
@@ -767,17 +770,14 @@ Manual evaluation remains available from the Alerts workspace. The worker is a p
     npm test
     npm run build
 
-The backend suite uses Node's built-in test runner. It includes unit tests for validation, gateway signatures and health, billing logic, alert conditions, and scheduler timing helpers. The frontend build runs TypeScript project checks and Vite bundling.
+The backend suite uses Node's built-in test runner. It includes unit tests for validation, gateway signatures and health, billing logic, alert conditions, and scheduler timing helpers. The frontend build runs TypeScript project checks and Vite bundling. The combined check script runs both in sequence. Node 22 is declared in .nvmrc and npm engine compatibility is enforced through .npmrc.
 
 ### GitHub Actions
 
-The workflow at .github/workflows/ci.yml runs on pushes and pull requests targeting main. It:
+The workflow at .github/workflows/ci.yml runs on pushes and pull requests targeting main. It uses separate jobs so the frontend build still runs when backend tests fail:
 
-1. Checks out the repository.
-2. Installs Node.js 22.
-3. Installs npm workspace dependencies.
-4. Runs the backend test suite.
-5. Builds the Vue/TypeScript frontend.
+1. Backend job: checks out the repository, installs Node.js 22 and workspace dependencies, then runs the backend test suite.
+2. Frontend job: checks out the repository, installs Node.js 22 and workspace dependencies, then runs TypeScript checks and the Vite production build.
 
 A workflow being configured is not proof that a particular commit passed. Check the Actions tab for the latest run and inspect failures before release.
 
@@ -858,7 +858,7 @@ GridPulse is an ambitious portfolio implementation, but the following boundaries
 
 ## Contributing
 
-Contributions should preserve the platform's security and modeling principles.
+See SECURITY.md for responsible vulnerability disclosure guidance. Contributions should preserve the platform's security and modeling principles.
 
 1. Create a focused branch for each change.
 2. Keep organization scope in every tenant-owned query and mutation.
