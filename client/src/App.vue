@@ -101,7 +101,7 @@ watch([activeOrganizationId, period, user], () => { if (user.value) void loadAna
       <p class="nav-caption">WORKSPACE</p>
       <div class="workspace"><span class="workspace-icon">{{ activeOrganization?.name?.slice(0,1) ?? 'G' }}</span><span><b>{{ activeOrganization?.name ?? 'Select organization' }}</b><small>{{ activeOrganization?.role ?? 'No role' }} workspace</small></span><select v-if="organizations.length > 1" v-model="activeOrganizationId" aria-label="Select organization"><option v-for="org in organizations" :key="org.id" :value="org.id">{{ org.name }}</option></select></div>
       <p class="nav-caption section-caption">ENERGY OPERATIONS</p>
-      <nav><a class="active" href="#"><span>◫</span>Overview</a><a href="#facilities"><span>⌂</span>Facilities</a><a href="#facilities"><span>◉</span>Meters</a><a href="#energy"><span>⌁</span>Energy data</a><a href="#"><span>↗</span>Demand intelligence <small>SOON</small></a></nav>
+      <nav><a class="active" href="#"><span>◫</span>Overview</a><a href="#facilities"><span>⌂</span>Facilities</a><a href="#facilities"><span>◉</span>Meters</a><a href="#energy"><span>⌁</span>Energy data</a><a href="#intelligence"><span>↗</span>Demand intelligence</a></nav>
       <div class="sidebar-bottom"><div class="system-status"><i></i><span><b>Secure session active</b><small>{{ activeOrganization?.role ?? 'Member' }} access</small></span></div><div class="profile"><span class="avatar">{{ user.name.slice(0,2).toUpperCase() }}</span><span><b>{{ user.name }}</b><small>{{ user.email }}</small></span><button class="logout" @click="signOut">Log out</button></div></div>
     </aside>
     <section class="main">
