@@ -73,6 +73,7 @@ export const getEnergyIntelligence = asyncHandler(async (request, response) => {
     data: {
       range: { from: from.toISOString(), to: now.toISOString() },
       generatedAt: now.toISOString(),
+      history: daily.map((item) => ({ date: item._id, energyKwh: Number(Number(item.energyKwh).toFixed(3)), readingCount: item.readingCount })),
       forecast: buildEnergyForecast(daily, horizonDays, now),
       anomalies,
       anomalySummary: {
