@@ -39,7 +39,7 @@ const formatMoney = (amount: number | null | undefined, code = selectedBill.valu
   catch { return code + ' ' + amount.toFixed(2) }
 }
 const formatNumber = (amount: number | null | undefined, digits = 2) => amount == null ? '—' : amount.toLocaleString(undefined, { maximumFractionDigits: digits })
-const periodLabel = (bill: EnergyBill) => new Date(bill.periodStart).toLocaleDateString() + ' – ' + new Date(bill.periodEnd).toLocaleDateString()
+const periodLabel = (bill: EnergyBill) => bill.periodStart.slice(0, 10) + ' – ' + bill.periodEnd.slice(0, 10)
 
 async function loadWorkspace() {
   if (!props.organizationId) return
