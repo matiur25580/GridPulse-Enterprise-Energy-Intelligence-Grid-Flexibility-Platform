@@ -76,3 +76,55 @@ test('forecast backtest returns null metrics when there is insufficient history'
   assert.equal(result.metrics.maeKwh, null)
   assert.equal(result.metrics.mapePercent, null)
 })
+
+
+test('forecast backtest excludes zero-actual days from MAPE but includes them in error metrics', () => {
+  const daily = Array.from({ length: 9 }, (_item, index) => ({
+    _id: new Date(Date.UTC(2026, 1, index + 1)).toISOString().slice(0, 10),
+    energyKwh: index === 7 ? 0 : 100,
+  }))
+  const result = evaluateEnergyForecast(daily, 7)
+
+  assert.equal(result.evaluatedDays, 2)
+  assert.equal(result.predictions[0].actualKwh, 0)
+  assert.equal(result.predictions[0].absolutePercentageError, null)
+  assert.equal(result.metrics.maeKwh, 50)
+  assert.equal(result.metrics.rmseKwh, 70.711)
+  assert.equal(result.metrics.mapePercent, 0)
+  assert.equal(result.metrics.weightedAbsolutePercentageError, 100)
+  assert.equal(result.metrics.meanErrorKwh, 50)
+})
+
+test('forecast backtest predictions do not use the target day or later observations', () => {
+  const daily = Array.from({ length: 12 }, (_item, index) => ({
+    _id: new Date(Date.UTC(2026, 2, index + 1)).toISOString().slice(0, 10),
+    energyKwh: 80 + index,
+  }))
+  const changedFuture = daily.map((item, index) => ({
+    ...item,
+    energyKwh: index === 10 ? 9000 : item.energyKwh,
+  }))
+
+  const original = evaluateEnergyForecast(daily, 5)
+  const changed = evaluateEnergyForecast(changedFuture, 5)
+  assert.equal(original.evaluatedDays, 5)
+  assert.deepEqual(
+    changed.predictions.slice(0, -1).map((item) => item.predictedKwh),
+    original.predictions.slice(0, -1).map((item) => item.predictedKwh),
+  )
+  assert.equal(changed.predictions.at(-1).predictedKwh, original.predictions.at(-1).predictedKwh)
+})
+
+test('forecast backtest reports errors for all-zero actuals while percentage metrics remain undefined', () => {
+  const daily = Array.from({ length: 9 }, (_item, index) => ({
+    _id: new Date(Date.UTC(2026, 3, index + 1)).toISOString().slice(0, 10),
+    energyKwh: 0,
+  }))
+  const result = evaluateEnergyForecast(daily, 7)
+
+  assert.equal(result.evaluatedDays, 2)
+  assert.equal(result.metrics.maeKwh, 0)
+  assert.equal(result.metrics.rmseKwh, 0)
+  assert.equal(result.metrics.mapePercent, null)
+  assert.equal(result.metrics.weightedAbsolutePercentageError, null)
+})
