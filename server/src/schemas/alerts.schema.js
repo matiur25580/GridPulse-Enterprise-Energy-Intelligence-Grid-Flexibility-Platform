@@ -22,7 +22,7 @@ export const createAlertRuleSchema = z.object({
 })
 
 export const updateAlertRuleSchema = z.object({ status: z.enum(['active', 'disabled']) })
-export const evaluateAlertsSchema = z.object({ now: z.string().datetime({ offset: true }).optional() })
+export const evaluateAlertsSchema = z.object({}).strict()
 export const listIncidentsQuerySchema = z.object({
   status: z.enum(['open', 'acknowledged', 'resolved']).optional(),
   severity: z.enum(['low', 'medium', 'high', 'critical']).optional(),
