@@ -9,6 +9,7 @@ export const createAlertRuleSchema = z.object({
   name: z.string().trim().min(2).max(120),
   type: z.enum(['high_consumption', 'meter_silent', 'gateway_silent']),
   targetId: objectId,
+  targetType: z.enum(['facility', 'meter', 'gateway']),
   thresholdKwh: z.number().finite().positive().max(100000000).optional(),
   windowMinutes: z.number().int().min(5).max(10080).default(60),
   staleAfterMinutes: z.number().int().min(5).max(10080).default(60),
