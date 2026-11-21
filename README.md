@@ -86,7 +86,10 @@ All endpoints are prefixed with `/api/v1`.
 | POST | `/organizations/:organizationId/meters/:meterId/readings` | Owner/admin/operator | Ingest up to 1,000 readings |
 | GET | `/organizations/:organizationId/meters/:meterId/readings` | Organization member | Query readings with optional `from`, `to`, `page`, and `limit` |
 | GET | `/organizations/:organizationId/analytics/overview` | Organization member | Portfolio KPIs, daily usage, facility breakdown, and data-quality counts |
-| GET | `/organizations/:organizationId/analytics/intelligence` | Organization member | Explainable energy forecast and meter-level consumption anomaly detection |\n| POST | `/organizations/:organizationId/optimization/simulate` | Organization member | Simulate tariff-aware load shifting and battery dispatch against observed hourly energy data |
+| GET | `/organizations/:organizationId/analytics/intelligence` | Organization member | Explainable energy forecast and meter-level consumption anomaly detection |
+| POST | `/organizations/:organizationId/optimization/simulate` | Organization member | Simulate tariff-aware load shifting and battery dispatch against observed hourly energy data |
+| POST | `/organizations/:organizationId/grid-flexibility/simulate` | Organization member | Estimate solar self-consumption, surplus generation, demand-response impact and avoided emissions |
+| GET | `/organizations/:organizationId/reports/energy` | Organization member | Generate a bounded-period energy, facility, meter, data-quality and indicative emissions report |
 
 ### Facility example
 
@@ -214,8 +217,10 @@ Roles available: `owner`, `admin`, `operator`, `analyst`, and `viewer`. All memb
 3. Facilities, meters, and energy-reading ingestion — APIs, models, and authenticated management UI implemented; database-backed integration tests remain.
 4. Portfolio analytics endpoint and authenticated live-data dashboard — initial implementation complete; integration tests remain.
 5. Explainable baseline forecasting, anomaly detection, rolling-origin backtesting, and authenticated intelligence dashboard — initial implementation complete; advanced model evaluation and monitoring remain.
-6. Optimization scenarios and demand-response simulation.
-7. Renewable assets, billing, reporting, audit, and operational hardening.
+6. Tariff-aware optimization scenario API and battery dispatch simulation — initial implementation complete; tariff persistence and billing-grade validation remain.
+7. Renewable energy and demand-response advisory simulation — initial implementation complete; metered exports, settlement, and production integration remain.
+8. Enterprise energy reporting with CSV and print-to-PDF exports — initial implementation complete; persisted tariff cost accounting, formal emissions inventory, audit controls, and compliance workflows remain.
+9. Production hardening, observability, and integration testing.
 
 ## Security
 
