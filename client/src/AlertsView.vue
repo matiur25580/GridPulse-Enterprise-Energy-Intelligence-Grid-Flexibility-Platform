@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { alertsApi, apiRequest, billingApi, gatewayApi, type AlertRule, type EnergyIncident, type GatewaySource } from './services/api'
+import { alertsApi, apiRequest, billingApi, gatewayApi, type AlertRule, type AlertEvaluationRun, type EnergyIncident, type GatewaySource } from './services/api'
 
 const props = defineProps<{ organizationId: string; role: string }>()
 type FacilityOption = { _id: string; name: string; code: string; status: string }
@@ -10,6 +10,7 @@ const meters = ref<MeterOption[]>([])
 const gateways = ref<GatewaySource[]>([])
 const rules = ref<AlertRule[]>([])
 const incidents = ref<EnergyIncident[]>([])
+const evaluations = ref<AlertEvaluationRun[]>([])
 const name = ref('')
 const type = ref<AlertRule['type']>('high_consumption')
 const targetType = ref<AlertRule['targetType']>('facility')
@@ -47,15 +48,17 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    const [ruleData, incidentData, facilityData, meterData, gatewayData] = await Promise.all([
+    const [ruleData, incidentData, _evaluationData, facilityData, meterData, gatewayData] = await Promise.all([
       alertsApi.rules(props.organizationId),
       alertsApi.incidents(props.organizationId),
+      alertsApi.evaluations(props.organizationId),
       billingApi.facilities(props.organizationId),
       apiRequest<MeterOption[]>(`/organizations/${encodeURIComponent(props.organizationId)}/meters`),
       gatewayApi.list(props.organizationId),
     ])
     rules.value = ruleData
     incidents.value = incidentData
+    evaluations.value = _evaluationData
     facilities.value = facilityData
     meters.value = meterData
     gateways.value = gatewayData
@@ -153,6 +156,6 @@ async function updateIncident(incident: EnergyIncident, status: 'acknowledged' |
         </div>
       </article>
     </div>
-    <p class="alerts-footnote">Evaluations run on demand in this release; no background scheduler or outbound email/SMS delivery is configured. High-consumption checks sum valid and estimated readings inside the configured window. Silence checks use the latest received meter reading or successful gateway delivery.</p>
+    <article class="alerts-panel alerts-run-history"><div class="alerts-panel-head"><div><h3>Evaluation history</h3><p>Scheduled and operator-initiated monitoring runs</p></div><span class="alerts-count">{{ evaluations.length }} recent runs</span></div><div class="alerts-run-list"><div v-for="run in evaluations" :key="run._id" class="alerts-run"><div><b>{{ run.trigger === 'scheduler' ? 'Automatic scheduler' : 'Manual evaluation' }}</b><span class="alerts-run-status" :class="'run-' + run.status">{{ run.status }}</span></div><small>{{ new Date(run.startedAt).toLocaleString() }} · {{ run.durationMs == null ? '—' : run.durationMs + ' ms' }} · {{ run.evaluatedRules }} rules</small><small v-if="run.status==='succeeded'">{{ run.created }} created · {{ run.updated }} updated · {{ run.recovered }} recovered</small><small v-if="run.errorMessage" class="alerts-run-error">{{ run.errorMessage }}</small></div><div v-if="!evaluations.length" class="alerts-empty">No evaluation runs have been recorded yet.</div></div></article><p class="alerts-footnote">Automatic evaluation is controlled by ALERT_EVALUATION_INTERVAL_SECONDS (default 300 seconds) and coordinated across API instances with a renewable MongoDB lease. Set it to 0 to disable the worker. Email, SMS and push notification delivery are not configured in this release. High-consumption checks sum valid and estimated readings inside the configured window; silence checks use the latest received meter reading or successful gateway delivery.</p>
   </section>
 </template>
