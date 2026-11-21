@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-const objectId = z.string().regex(/^[a-f\\d]{24}$/i, 'A valid identifier is required.')
+const objectId = z.string().regex(/^[a-f\d]{24}$/i, 'A valid identifier is required.')
 const mappingSchema = z.object({
   externalMeterId: z.string().trim().min(1).max(120),
   meterId: objectId,
