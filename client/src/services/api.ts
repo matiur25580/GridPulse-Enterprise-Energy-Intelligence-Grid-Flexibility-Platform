@@ -73,18 +73,29 @@ export interface EnergyAnomaly {
   method: string
   meter: { id: string; name: string; serialNumber: string } | null
 }
+export interface ForecastBacktest {
+  method: string
+  minimumTrainingDays: number
+  evaluatedDays: number
+  requestedDays: number
+  metrics: { maeKwh: number | null; rmseKwh: number | null; mapePercent: number | null; weightedAbsolutePercentageError: number | null; meanErrorKwh: number | null }
+  predictions: Array<{ date: string; actualKwh: number; predictedKwh: number; errorKwh: number; absoluteErrorKwh: number; absolutePercentageError: number | null }>
+  note: string
+}
 export interface EnergyIntelligence {
   range: { from: string; to: string }
   generatedAt: string
   history: IntelligenceHistoryPoint[]
   forecast: { model: string; methodology: string; historyCount: number; baselineDailyKwh: number; dailyTrendKwh: number; forecast: IntelligenceForecastPoint[] }
+  backtest: ForecastBacktest
+  facilityBacktests: Array<ForecastBacktest & { facilityId: string; facility: { name: string; code: string } | null }>
   anomalies: EnergyAnomaly[]
   anomalySummary: { count: number; high: number; medium: number }
   dataQuality: { included: string; excluded: string; historyDays: number; horizonDays: number }
 }
 export const intelligenceApi = {
-  overview: (organizationId: string, historyDays = 30, horizonDays = 7) =>
-    apiRequest<EnergyIntelligence>(`/organizations/${encodeURIComponent(organizationId)}/analytics/intelligence?historyDays=${historyDays}&horizonDays=${horizonDays}`),
+  overview: (organizationId: string, historyDays = 30, horizonDays = 7, backtestDays = 14) =>
+    apiRequest<EnergyIntelligence>(`/organizations/${encodeURIComponent(organizationId)}/analytics/intelligence?historyDays=${historyDays}&horizonDays=${horizonDays}&backtestDays=${backtestDays}`),
 }
 
 export interface User { id: string; name: string; email: string }
