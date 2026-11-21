@@ -39,3 +39,15 @@ test('does not invent solar or load in missing hours', () => {
   assert.equal(missing.loadKwh, 0)
   assert.equal(missing.solarGenerationKwh, 0)
 })
+
+test('does not count unmatched solar hours as self-consumption or grid export', () => {
+  const result = evaluateGridFlexibility([
+    { hour: 12, loadKwh: 0, solarKwh: 8, observedLoad: false, observedSolar: true },
+    { hour: 18, loadKwh: 6, solarKwh: 0, observedLoad: true, observedSolar: false },
+  ], input)
+  assert.equal(result.renewable.dailyGenerationKwh, 8)
+  assert.equal(result.renewable.dailySelfConsumedKwh, 0)
+  assert.equal(result.renewable.dailyEstimatedExportKwh, 0)
+  assert.equal(result.renewable.selfConsumptionPercent, null)
+  assert.equal(result.demandResponse.dailyBaselineGridImportKwh, 6)
+})
