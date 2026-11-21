@@ -138,7 +138,7 @@ export interface GridFlexibilityInput {
 export interface GridFlexibilityResult {
   generatedAt: string
   range: { from: string; to: string; requestedDays: number }
-  dataCoverage: { loadSource: 'main' | 'submeter'; hoursWithLoad: number; hoursWithSolar: number; observedDays: number; includedQuality: string }
+  dataCoverage: { loadSource: 'main' | 'submeter'; hoursWithLoad: number; hoursWithSolar: number; observedDays: number; observedLoadDays: number; observedSolarDays: number; includedQuality: string }
   assumptions: Record<string, string>
   renewable: { dailyGenerationKwh: number; dailySelfConsumedKwh: number; dailyEstimatedExportKwh: number; selfConsumptionPercent: number | null; solarCoveragePercent: number | null }
   demandResponse: { eventHours: number[]; dailyBaselineGridImportKwh: number; dailyCurtailedKwh: number; dailyPostEventGridImportKwh: number; reductionPercent: number; estimatedIncentive: number; incentiveRatePerKwh: number }
