@@ -45,7 +45,7 @@ The deterministic seed creates:
 - One high-consumption alert rule and one acknowledged demonstration incident.
 - An explicitly disabled email-notification subscription with no recipients.
 
-The seed is additive and idempotent: stable external reading IDs prevent duplicate telemetry on repeated runs. It adds the latest 60-day window on each run, so the database can gain new hourly observations as time advances.
+The seed is additive and idempotent: stable external reading IDs prevent duplicate telemetry on repeated runs. It adds the latest 60-day window on each run, so the database can gain new hourly observations as time advances. The demo user is created only once; reruns do not reset an existing account password, so keep the original password or use a fresh dedicated demo database.
 
 ## Authentic browser screenshot capture
 
