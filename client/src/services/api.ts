@@ -309,3 +309,47 @@ export const gatewayApi = {
   setStatus: (organizationId: string, sourceId: string, status: 'active' | 'disabled') =>
     apiRequest<GatewaySource>(`/organizations/${encodeURIComponent(organizationId)}/integrations/gateways/${encodeURIComponent(sourceId)}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
 }
+
+
+export interface AlertRule {
+  _id: string
+  name: string
+  type: 'high_consumption' | 'meter_silent' | 'gateway_silent'
+  target: string
+  targetType: 'facility' | 'meter' | 'gateway'
+  thresholdKwh?: number
+  windowMinutes: number
+  staleAfterMinutes: number
+  severity: 'low' | 'medium' | 'high' | 'critical'
+  status: 'active' | 'disabled'
+  createdAt: string
+}
+export interface EnergyIncident {
+  _id: string
+  type: AlertRule['type']
+  title: string
+  description: string
+  severity: AlertRule['severity']
+  status: 'open' | 'acknowledged' | 'resolved'
+  firstSeenAt: string
+  lastSeenAt: string
+  occurrences: number
+  observedValue?: number
+  thresholdValue?: number
+  unit?: string
+  resolutionReason?: 'condition_cleared' | 'operator_resolved'
+  rule: { _id: string; name: string; type: string } | string
+}
+export const alertsApi = {
+  rules: (organizationId: string) => apiRequest<AlertRule[]>(`/organizations/${encodeURIComponent(organizationId)}/alerts/rules`),
+  createRule: (organizationId: string, input: { name: string; type: AlertRule['type']; targetId: string; targetType: AlertRule['targetType']; thresholdKwh?: number; windowMinutes: number; staleAfterMinutes: number; severity: AlertRule['severity'] }) =>
+    apiRequest<AlertRule>(`/organizations/${encodeURIComponent(organizationId)}/alerts/rules`, { method: 'POST', body: JSON.stringify(input) }),
+  setRuleStatus: (organizationId: string, ruleId: string, status: 'active' | 'disabled') =>
+    apiRequest<AlertRule>(`/organizations/${encodeURIComponent(organizationId)}/alerts/rules/${encodeURIComponent(ruleId)}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  incidents: (organizationId: string, status?: EnergyIncident['status']) =>
+    apiRequest<EnergyIncident[]>(`/organizations/${encodeURIComponent(organizationId)}/alerts/incidents${status ? '?status=' + status : ''}`),
+  evaluate: (organizationId: string) =>
+    apiRequest<{ evaluatedRules: number; created: number; updated: number; recovered: number; clear: number; skipped: number }>(`/organizations/${encodeURIComponent(organizationId)}/alerts/evaluate`, { method: 'POST', body: '{}' }),
+  updateIncident: (organizationId: string, incidentId: string, status: 'acknowledged' | 'resolved') =>
+    apiRequest<EnergyIncident>(`/organizations/${encodeURIComponent(organizationId)}/alerts/incidents/${encodeURIComponent(incidentId)}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+}
