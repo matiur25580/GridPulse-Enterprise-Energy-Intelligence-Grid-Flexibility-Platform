@@ -5,6 +5,7 @@ import helmet from 'helmet'
 import { env } from './config/env.js'
 import authRoutes from './routes/auth.routes.js'
 import organizationRoutes from './routes/organization.routes.js'
+import assetRoutes from './routes/asset.routes.js'
 import { errorHandler, notFoundHandler } from './middleware/error-handler.js'
 
 export const app = express()
@@ -24,6 +25,7 @@ app.get('/api/v1/health', (_request, response) => {
 })
 
 app.use('/api/v1/auth', authRoutes)
+app.use('/api/v1/organizations', assetRoutes)
 app.use('/api/v1/organizations', organizationRoutes)
 app.use(notFoundHandler)
 app.use(errorHandler)
