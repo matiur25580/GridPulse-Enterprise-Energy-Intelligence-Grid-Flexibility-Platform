@@ -71,6 +71,7 @@ watch(() => props.organizationId, () => {
 })
 watch(facilityId, () => {
   latestReconciliation.value = null
+  if (selectedTariff.value) currency.value = selectedTariff.value.currency
   void loadFacilityTariffs().catch((cause) => { error.value = cause instanceof Error ? cause.message : 'Unable to load tariffs.' })
   if (props.organizationId) void integrationsApi.invoices(props.organizationId, facilityId.value).then((value) => { invoices.value = value }).catch((cause) => { error.value = cause instanceof Error ? cause.message : 'Unable to load invoices.' })
 })
