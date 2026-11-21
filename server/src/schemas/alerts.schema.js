@@ -29,3 +29,5 @@ export const listIncidentsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(200).default(100),
 })
 export const updateIncidentSchema = z.object({ status: z.enum(['acknowledged', 'resolved']) })
+
+export const listEvaluationsQuerySchema = z.object({ limit: z.coerce.number().int().min(1).max(100).default(20) })
