@@ -80,6 +80,7 @@ onMounted(load)
       <div class="intelligence-controls">
         <label>History <select v-model.number="historyDays"><option :value="7">7 days</option><option :value="14">14 days</option><option :value="30">30 days</option><option :value="60">60 days</option><option :value="90">90 days</option></select></label>
         <label>Forecast <select v-model.number="horizonDays"><option :value="1">1 day</option><option :value="3">3 days</option><option :value="7">7 days</option><option :value="14">14 days</option></select></label>
+        <label>Backtest <select v-model.number="backtestDays"><option :value="7">7 days</option><option :value="14">14 days</option><option :value="30">30 days</option></select></label>
         <button class="asset-refresh" @click="load" :disabled="loading">{{ loading ? 'Loading…' : '↻ Refresh' }}</button>
       </div>
     </div>
@@ -97,6 +98,21 @@ onMounted(load)
         <VChart v-if="result.history.length" class="intelligence-chart" :option="forecastOption" autoresize />
         <div v-else class="intelligence-state">Not enough telemetry to plot a forecast. Ingest valid or estimated readings to begin.</div>
         <p class="intelligence-method">{{ result.forecast.methodology }}</p>
+      </article>
+
+      <article class="intelligence-panel">
+        <div class="intelligence-panel-head"><div><h3>Forecast model evaluation</h3><p>Rolling-origin one-day-ahead backtest · prior observations only</p></div><span class="anomaly-count">{{ result.backtest.evaluatedDays }} EVALUATED DAYS</span></div>
+        <div class="backtest-kpis">
+          <div><span>MAE</span><b>{{ result.backtest.metrics.maeKwh === null ? '—' : format(result.backtest.metrics.maeKwh, 2) + ' kWh' }}</b><small>Mean absolute error</small></div>
+          <div><span>RMSE</span><b>{{ result.backtest.metrics.rmseKwh === null ? '—' : format(result.backtest.metrics.rmseKwh, 2) + ' kWh' }}</b><small>Root mean squared error</small></div>
+          <div><span>MAPE</span><b>{{ result.backtest.metrics.mapePercent === null ? '—' : format(result.backtest.metrics.mapePercent, 1) + '%' }}</b><small>Zero-actual days excluded</small></div>
+          <div><span>WAPE</span><b>{{ result.backtest.metrics.weightedAbsolutePercentageError === null ? '—' : format(result.backtest.metrics.weightedAbsolutePercentageError, 1) + '%' }}</b><small>Weighted absolute percentage error</small></div>
+          <div><span>BIAS</span><b>{{ result.backtest.metrics.meanErrorKwh === null ? '—' : (result.backtest.metrics.meanErrorKwh > 0 ? '+' : '') + format(result.backtest.metrics.meanErrorKwh, 2) + ' kWh' }}</b><small>Positive = over-prediction</small></div>
+        </div>
+        <VChart v-if="result.backtest.evaluatedDays" class="intelligence-chart" :option="backtestOption" autoresize />
+        <div v-else class="intelligence-state">Insufficient contiguous daily history. At least eight consecutive observed days are needed to score a one-day-ahead forecast.</div>
+        <p class="intelligence-method">{{ result.backtest.note }}</p>
+        <div v-if="result.facilityBacktests.length" class="anomaly-table-wrap"><table class="anomaly-table"><thead><tr><th>FACILITY</th><th>TEST DAYS</th><th>MAE (kWh)</th><th>RMSE (kWh)</th><th>MAPE</th><th>WAPE</th></tr></thead><tbody><tr v-for="item in result.facilityBacktests" :key="item.facilityId"><td><b>{{ item.facility?.name ?? 'Facility' }}</b><small>{{ item.facility?.code ?? item.facilityId }}</small></td><td>{{ item.evaluatedDays }}</td><td>{{ item.metrics.maeKwh === null ? '—' : format(item.metrics.maeKwh, 2) }}</td><td>{{ item.metrics.rmseKwh === null ? '—' : format(item.metrics.rmseKwh, 2) }}</td><td>{{ item.metrics.mapePercent === null ? '—' : format(item.metrics.mapePercent, 1) + '%' }}</td><td>{{ item.metrics.weightedAbsolutePercentageError === null ? '—' : format(item.metrics.weightedAbsolutePercentageError, 1) + '%' }}</td></tr></tbody></table></div>
       </article>
       <article class="intelligence-panel">
         <div class="intelligence-panel-head"><div><h3>Consumption anomaly review</h3><p>Meter-level outliers compared with up to 14 preceding observed days</p></div><span class="anomaly-count">{{ result.anomalies.length }} CANDIDATES</span></div>
