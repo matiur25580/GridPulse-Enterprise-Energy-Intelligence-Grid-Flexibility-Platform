@@ -1,4 +1,5 @@
 import mongoose from 'mongoose'
+import { createHash } from 'node:crypto'
 import { GatewaySource } from '../models/gateway-source.model.js'
 import { Organization } from '../models/organization.model.js'
 import { GatewayRequestNonce } from '../models/gateway-request-nonce.model.js'
@@ -28,7 +29,7 @@ export const verifyGatewaySignature = asyncHandler(async (request, _response, ne
   try {
     await GatewayRequestNonce.create({
       source: source._id,
-      signature,
+      signatureDigest: createHash('sha256').update(signature).digest('hex'),
       expiresAt: new Date((seconds + 300) * 1000),
     })
   } catch (error) {
