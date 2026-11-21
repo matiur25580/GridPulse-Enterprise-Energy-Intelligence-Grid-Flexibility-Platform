@@ -69,7 +69,16 @@ watch(() => props.organizationId, () => {
   meterId.value = ''; facilityId.value = ''; tariffId.value = ''; latestReconciliation.value = null
   void loadWorkspace()
 })
-watch(selectedTariff, (tariff) => { if (tariff) currency.value = tariff.currency })
+watch(selectedTariff, (tariff) => {
+  if (!tariff) return
+  currency.value = tariff.currency
+  const effectiveStart = tariff.effectiveFrom.slice(0, 10)
+  const effectiveEnd = tariff.effectiveTo?.slice(0, 10) ?? null
+  if (from.value < effectiveStart) from.value = effectiveStart
+  if (effectiveEnd && from.value > effectiveEnd) from.value = effectiveEnd
+  if (to.value < from.value) to.value = from.value
+  if (effectiveEnd && to.value > effectiveEnd) to.value = effectiveEnd
+})
 watch(facilityId, () => {
   latestReconciliation.value = null
   if (selectedTariff.value) currency.value = selectedTariff.value.currency
