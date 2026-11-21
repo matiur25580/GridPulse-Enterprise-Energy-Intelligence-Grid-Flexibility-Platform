@@ -44,5 +44,5 @@ test('does not invent demand charges when measured kW is absent', () => {
   const result = calculateCosts(noDemand, tariff)
   assert.equal(result.summary.peakDemandKw, null)
   assert.equal(result.summary.demandCharge, 0)
-  assert.ok(result.insights.some((item) => item.includes('demand-kW telemetry is missing')))
+  assert.ok(result.insights.some((item) => item.includes('no eligible measured kW telemetry exists')))
 })
