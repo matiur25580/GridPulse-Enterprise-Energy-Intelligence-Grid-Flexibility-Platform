@@ -4,7 +4,7 @@
 
 GridPulse is a MEVN-based platform for multi-site energy monitoring, demand forecasting, energy optimization, renewable asset visibility, and demand-response workflows.
 
-> **Project status:** Implemented foundations include Express/Mongoose configuration, authentication with rotating refresh sessions, organization membership and role checks, facility and meter management, tenant-scoped energy-reading ingestion/query APIs, and a tenant-scoped energy overview analytics endpoint. The frontend now includes registration/login, refresh-cookie session restoration, organization selection, logout, and tenant-scoped live analytics loading. Empty telemetry states are shown explicitly; no synthetic production metrics are presented. Explainable forecasting, anomaly detection, rolling-origin model evaluation, advisory energy optimization, solar/demand-response scenarios, enterprise energy reporting, facility-specific tariffs and bill estimates, audited CSV meter imports, actual-versus-estimated utility invoice reconciliation, and signed generic IoT gateway webhooks are implemented. Vendor-specific utility/IoT connectors, scheduled polling, invoice OCR, settlement, and production hardening remain planned.
+> **Project status:** Implemented foundations include Express/Mongoose configuration, authentication with rotating refresh sessions, organization membership and role checks, facility and meter management, tenant-scoped energy-reading ingestion/query APIs, and a tenant-scoped energy overview analytics endpoint. The frontend now includes registration/login, refresh-cookie session restoration, organization selection, logout, and tenant-scoped live analytics loading. Empty telemetry states are shown explicitly; no synthetic production metrics are presented. Explainable forecasting, anomaly detection, rolling-origin model evaluation, advisory energy optimization, solar/demand-response scenarios, enterprise energy reporting, facility-specific tariffs and bill estimates, audited CSV meter imports, actual-versus-estimated utility invoice reconciliation, signed generic IoT gateway webhooks, and on-demand alert rules with incident acknowledgement/recovery are implemented. Vendor-specific utility/IoT connectors, scheduled polling, background alert evaluation and notification delivery, invoice OCR, settlement, and production hardening remain planned.
 
 ## Product goals
 
@@ -107,6 +107,12 @@ All endpoints are prefixed with `/api/v1`.
 | POST | `/organizations/:organizationId/integrations/gateways/:sourceId/rotate-secret` | Owner/admin/operator | Immediately rotate a gateway signing secret |
 | PATCH | `/organizations/:organizationId/integrations/gateways/:sourceId/status` | Owner/admin/operator | Enable or disable a gateway source |
 | POST | `/integrations/gateways/:sourceId/readings` | HMAC-signed gateway | Receive up to 500 signed telemetry events |
+| GET | `/organizations/:organizationId/alerts/rules` | Organization member | List organization alert rules |
+| POST | `/organizations/:organizationId/alerts/rules` | Owner/admin/operator | Create a facility, meter, or gateway alert rule |
+| PATCH | `/organizations/:organizationId/alerts/rules/:ruleId` | Owner/admin/operator | Enable or disable an alert rule |
+| GET | `/organizations/:organizationId/alerts/incidents` | Organization member | List incidents; optional status, severity and limit filters |
+| POST | `/organizations/:organizationId/alerts/evaluate` | Owner/admin/operator | Evaluate active rules against current telemetry and update incidents |
+| PATCH | `/organizations/:organizationId/alerts/incidents/:incidentId` | Owner/admin/operator | Acknowledge or resolve an active incident |
 
 ### Facility example
 
@@ -335,6 +341,31 @@ await fetch(webhookUrl, {
 
 The endpoint currently accepts provider-neutral HTTP webhooks. MQTT broker subscriptions, Modbus polling, vendor-specific cloud APIs, scheduled backfills, outbound notifications, and hardware command/control are not implemented. Gateway health is a freshness indicator in the workspace, not a guaranteed delivery SLA or an alert delivery service.
 
+
+### Intelligent alerts and incident operations
+
+The **Alerts & incidents** workspace provides organization-scoped monitoring rules and a deduplicated incident queue.
+
+**Supported rules**
+- **High consumption:** sums valid and estimated readings for a selected facility or meter over a configurable 5-minute to 7-day observation window. An incident is created only when observed energy strictly exceeds the configured kWh threshold.
+- **Meter silence:** detects a meter with no recorded reading inside its configured 5-minute to 7-day freshness window, including meters that have never delivered telemetry.
+- **Gateway silence:** detects a gateway source with no successful signed delivery inside its configured freshness window, including newly provisioned sources that have never delivered data.
+
+Rules carry low, medium, high, or critical severity. Only active facilities, meters, and gateway sources in the current organization can be selected as targets. Rule creation and management are restricted to owner/admin/operator roles; all organization members can view rules and incidents.
+
+**Incident lifecycle**
+- Repeated evaluations update the existing open/acknowledged incident instead of creating a new row each time. Occurrence counts and last-seen timestamps are retained.
+- Operators can acknowledge or manually resolve active incidents.
+- When a later evaluation finds that the triggering condition has cleared, the incident is automatically marked resolved with the `condition_cleared` reason.
+- Disabling a rule resolves its active incident on the next evaluation. Re-triggering after resolution creates a new incident.
+- Incidents are isolated by organization and indexed for status/severity/time-based queue views.
+
+**Evaluation cadence and delivery limitations**
+- This release exposes an authenticated evaluation endpoint and a **Run evaluation** action in the UI. Evaluation is on demand; there is not yet a built-in scheduler, worker queue, email/SMS/push delivery, escalation policy, or guaranteed real-time alert SLA.
+- For periodic checks, an operator-controlled external scheduler can call the organization evaluation endpoint using a secure service identity. Do not expose user access tokens in cron logs or client-side code.
+- High-consumption thresholds are raw energy totals for the configured window, not weather-normalized baselines, tariff peaks, or statistical anomaly scores. Meter/gateway silence uses the latest reading/delivery timestamps.
+- This is operational decision support. It does not issue equipment commands or replace a safety-rated industrial alarm system.
+
 ### Continuous integration
 
 GitHub Actions runs the backend Node.js test suite and Vue/TypeScript production build on pushes and pull requests targeting `main`. The workflow installs workspace dependencies with Node.js 22. A successful workflow is required before treating a change as build-verified.
@@ -366,7 +397,7 @@ Roles available: `owner`, `admin`, `operator`, `analyst`, and `viewer`. All memb
 7. Renewable energy and demand-response advisory simulation — initial implementation complete; metered exports, settlement, and production integration remain.
 8. Enterprise energy reporting with CSV and print-to-PDF exports — initial implementation complete; formal emissions inventory, audit controls, and compliance workflows remain.
 9. Facility-specific tariff versioning, time-of-use cost calculation, demand charges, saved bill estimates, period comparisons, and CSV exports — initial implementation complete; utility integrations, invoice settlement, and jurisdiction-specific tariff rules remain.
-10. Meter CSV batch ingestion, invoice reconciliation, encrypted gateway secrets, signed webhook telemetry, and source freshness monitoring — initial implementation complete; vendor-specific connectors, scheduled polling, notifications, and protocol adapters remain.
+10. Meter CSV batch ingestion, invoice reconciliation, encrypted gateway secrets, signed webhook telemetry, source freshness monitoring, and incident management — initial implementation complete; background scheduling, outbound notifications, and vendor protocol adapters remain.
 11. Production hardening, observability, and integration testing.
 
 ## Security
