@@ -90,7 +90,11 @@ All endpoints are prefixed with `/api/v1`.
 | POST | `/organizations/:organizationId/optimization/simulate` | Organization member | Simulate tariff-aware load shifting and battery dispatch against observed hourly energy data |
 | POST | `/organizations/:organizationId/grid-flexibility/simulate` | Organization member | Estimate solar self-consumption, surplus generation, demand-response impact and avoided emissions |
 | GET | `/organizations/:organizationId/reports/energy` | Organization member | Generate a bounded-period energy, facility, meter, data-quality and indicative emissions report |
-| GET/POST | `/organizations/:organizationId/billing/tariffs` | Organization member / owner-admin-operator | List and version facility-specific time-of-use tariff plans |\n| GET/POST | `/organizations/:organizationId/billing/bills` | Organization member / owner-admin-operator-analyst | List saved estimates and generate a tenant-scoped energy bill estimate |\n| GET | `/organizations/:organizationId/billing/bills/:billId` | Organization member | Retrieve a saved estimate snapshot |
+| GET | `/organizations/:organizationId/billing/tariffs` | Organization member | List facility-specific tariff versions |
+| POST | `/organizations/:organizationId/billing/tariffs` | Owner/admin/operator | Create a tariff version; automatically closes an earlier open-ended version |
+| POST | `/organizations/:organizationId/billing/bills/estimate` | Owner/admin/operator/analyst | Calculate and save a tenant-scoped bill estimate |
+| GET | `/organizations/:organizationId/billing/bills` | Organization member | List saved bill estimates |
+| GET | `/organizations/:organizationId/billing/bills/:billId` | Organization member | Retrieve a saved estimate snapshot |
 
 ### Facility example
 
@@ -201,7 +205,7 @@ The report is intended for operational management and internal review. It does n
 
 The authenticated **Tariffs & Billing** workspace supports facility-specific tariff configuration and reproducible operational bill estimates.
 
-- **Tariff versioning:** configure currency, a default per-kWh rate, up to twelve time-of-use rate bands, applicable local hours and weekdays, effective dates, fixed service charge, measured-demand charge per kW, and a configurable tax/surcharge percentage. Active tariff effective periods for the same facility cannot overlap. Create a new version rather than silently changing a tariff used by prior estimates.
+- **Tariff versioning:** configure currency, a default per-kWh rate, up to twelve time-of-use rate bands, applicable local hours and weekdays, effective dates, fixed service charge, measured-demand charge per kW, and a configurable tax/surcharge percentage. Active tariff effective periods for the same facility cannot overlap. Creating a later version automatically closes a previous open-ended version on the day before the new effective date; existing bill snapshots retain their original tariff inputs.
 - **Time-of-use billing:** eligible readings are grouped by the facility's IANA timezone and local hour/day. Configured rate bands are applied to matching intervals; unmatched intervals use the default rate.
 - **Demand and fixed charges:** demand charges use the maximum measured kW in the selected billing period. When demand telemetry is absent, no demand charge is invented and the estimate explains the omission. Fixed charge is applied once per billing period.
 - **Data quality and meter selection:** valid and estimated readings are included; flagged readings are excluded. Active main meters are preferred. Active submeters are used only when no eligible main-meter data exists for the period. The estimate reports its source, observed hours/days, reading count, and estimated-reading count.
