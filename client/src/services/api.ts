@@ -225,3 +225,58 @@ export interface EnergyOverview {
   daily: { _id: string; energyKwh: number; peakDemandKw: number | null; readingCount: number }[]
   facilities: { facilityId: string; name: string; code: string; energyKwh: number; peakDemandKw: number | null; readingCount: number }[]
 }
+
+
+export interface MeterImportBatch {
+  _id: string
+  externalBatchId: string
+  fileName: string
+  status: 'processing' | 'completed' | 'failed'
+  received: number
+  inserted: number
+  duplicates: number
+  errorSummary?: string
+  startedAt: string
+  completedAt?: string
+  meter: { _id: string; name: string; serialNumber: string } | string
+  facility: { _id: string; name: string; code: string } | string
+}
+export interface UtilityInvoice {
+  _id: string
+  invoiceNumber: string
+  supplier: string
+  periodStart: string
+  periodEnd: string
+  currency: string
+  actualEnergyKwh: number
+  actualAmount: number
+  facility: { _id: string; name: string; code: string }
+  reconciliation: {
+    status: 'within_tolerance' | 'discrepancy'
+    tolerancePercent: number
+    estimatedAmount: number
+    actualAmount: number
+    amountVariance: number
+    amountVariancePercent: number | null
+    estimatedEnergyKwh: number
+    actualEnergyKwh: number
+    energyVarianceKwh: number
+    energyVariancePercent: number | null
+    demandVarianceKw: number | null
+    notes: string[]
+    methodology: string
+  }
+}
+export const integrationsApi = {
+  importCsv: (organizationId: string, meterId: string, input: { externalBatchId: string; fileName: string; csv: string }) =>
+    apiRequest<{ batch: MeterImportBatch; replayed: boolean }>(`/organizations/${encodeURIComponent(organizationId)}/meters/${encodeURIComponent(meterId)}/imports/csv`, { method: 'POST', body: JSON.stringify(input) }),
+  imports: (organizationId: string, meterId?: string) =>
+    apiRequest<MeterImportBatch[]>(`/organizations/${encodeURIComponent(organizationId)}/integrations/meter-imports${meterId ? '?meterId=' + encodeURIComponent(meterId) : ''}`),
+  reconcileInvoice: (organizationId: string, input: {
+    facilityId: string; tariffId: string; invoiceNumber: string; supplier: string
+    from: string; to: string; currency: string; actualEnergyKwh: number
+    actualAmount: number; actualDemandKw?: number | null; tolerancePercent: number
+  }) => apiRequest<UtilityInvoice>(`/organizations/${encodeURIComponent(organizationId)}/integrations/utility-invoices/reconcile`, { method: 'POST', body: JSON.stringify(input) }),
+  invoices: (organizationId: string, facilityId?: string) =>
+    apiRequest<UtilityInvoice[]>(`/organizations/${encodeURIComponent(organizationId)}/integrations/utility-invoices${facilityId ? '?facilityId=' + encodeURIComponent(facilityId) : ''}`),
+}
