@@ -1,6 +1,8 @@
 import mongoose from 'mongoose'
+import { createHash } from 'node:crypto'
 import { GatewaySource } from '../models/gateway-source.model.js'
 import { Organization } from '../models/organization.model.js'
+import { GatewayRequestNonce } from '../models/gateway-request-nonce.model.js'
 import { env } from '../config/env.js'
 import { AppError } from '../utils/app-error.js'
 import { asyncHandler } from '../utils/async-handler.js'
@@ -24,6 +26,16 @@ export const verifyGatewaySignature = asyncHandler(async (request, _response, ne
   catch { throw new AppError('Gateway signing is not configured correctly.', 503, 'GATEWAY_SIGNING_UNAVAILABLE') }
   const expected = gatewaySignature(secret, timestamp, request.rawBody)
   if (!safeSignatureEqual(expected, signature)) throw new AppError('Gateway signature verification failed.', 401, 'GATEWAY_SIGNATURE_INVALID')
+  try {
+    await GatewayRequestNonce.create({
+      source: source._id,
+      signatureDigest: createHash('sha256').update(signature).digest('hex'),
+      expiresAt: new Date((seconds + 300) * 1000),
+    })
+  } catch (error) {
+    if (error?.code === 11000) throw new AppError('This signed gateway request has already been received.', 409, 'GATEWAY_REQUEST_REPLAYED')
+    throw error
+  }
   request.gatewaySource = source
   next()
 })
