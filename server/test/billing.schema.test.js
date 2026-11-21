@@ -34,6 +34,7 @@ test('rejects overlapping TOU hours on the same weekday and invalid rates', () =
   assert.equal(createTariffSchema.safeParse(overlapping).success, false)
   assert.equal(createTariffSchema.safeParse({ ...validTariff, defaultRatePerKwh: -1 }).success, false)
   assert.equal(createTariffSchema.safeParse({ ...validTariff, effectiveTo: '2025-12-31' }).success, false)
+  assert.equal(createTariffSchema.safeParse({ ...validTariff, effectiveFrom: '2026-02-30' }).success, false)
 })
 
 test('accepts date-bounded estimates and rejects reversed or oversized periods', () => {
@@ -41,4 +42,5 @@ test('accepts date-bounded estimates and rejects reversed or oversized periods',
   assert.equal(estimateBillSchema.safeParse(base).success, true)
   assert.equal(estimateBillSchema.safeParse({ ...base, from: '2026-02-01' }).success, false)
   assert.equal(estimateBillSchema.safeParse({ ...base, to: '2027-02-02' }).success, false)
+  assert.equal(estimateBillSchema.safeParse({ ...base, from: '2026-02-30' }).success, false)
 })
