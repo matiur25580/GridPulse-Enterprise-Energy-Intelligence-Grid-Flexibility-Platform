@@ -759,7 +759,30 @@ The initial forecast is deterministic and explainable:
 
 Manual evaluation remains available from the Alerts workspace. The worker is a periodic evaluator, not a hard real-time or safety-rated alarm system.
 
-**Notification status:** incidents are persisted and visible in the application. Email, SMS, Slack, Teams, push delivery, escalation policies, and an external notification outbox are not implemented yet.
+**Notification status:** organization-scoped email delivery is available through a durable MongoDB outbox and the Resend adapter. SMS, Slack, Teams, push delivery, quiet hours, and escalation policies remain roadmap items.
+
+---
+
+## Incident email notifications
+
+GridPulse supports durable organization-scoped email delivery for incident lifecycle events.
+
+- Owners and admins can configure up to 25 unique recipient addresses in the Alerts workspace.
+- New incidents and automatic recovery or operator-resolution events are written to a MongoDB notification outbox.
+- A background worker atomically claims records, processes bounded batches, and recovers expired processing locks.
+- Transient delivery failures use exponential backoff; permanent provider failures and exhausted retries move to a dead-letter state.
+- Resend idempotency keys protect against duplicate provider submissions when a worker restarts after acceptance.
+- The outbox is retained for 90 days. Delivery is at-least-once at the application boundary.
+
+### Provider configuration
+
+Set `RESEND_API_KEY` and `ALERT_EMAIL_FROM` on the API server, then configure organization recipients in **Alerts & incidents → Incident email notifications**. The sender identity must be verified with Resend. `ALERT_NOTIFICATION_INTERVAL_SECONDS` controls polling (default 15 seconds; set to 0 to disable delivery). If provider credentials are absent, the worker stays disabled and queued messages remain pending.
+
+API:
+- `GET /api/v1/organizations/:organizationId/alerts/notifications` — owner/admin read.
+- `PUT /api/v1/organizations/:organizationId/alerts/notifications` — owner/admin configure recipients.
+
+See [docs/notification-delivery.md](docs/notification-delivery.md) for setup, request examples, delivery behavior, and operational limitations. SMS, push, Slack, Teams, quiet hours, and escalation schedules are not implemented.
 
 ---
 
