@@ -9,6 +9,8 @@ import { parseMeterReadingsCsv } from '../utils/meter-csv.js'
 import { AppError } from '../utils/app-error.js'
 import { calculateInvoiceReconciliation } from '../utils/invoice-reconciliation.js'
 
+const publicBatch = (batch) => { const value = batch.toObject(); delete value.payloadHash; return value }
+
 export async function importMeterCsv({ organizationId, userId, meterId, input }) {
   const meter = await Meter.findOne({ _id: meterId, organization: organizationId, status: 'active' }).select('_id facility').lean()
   if (!meter) throw new AppError('Active meter not found in this organization.', 404, 'METER_NOT_FOUND')
@@ -26,11 +28,15 @@ export async function importMeterCsv({ organizationId, userId, meterId, input })
     batch = await MeterImportBatch.findOne({ organization: organizationId, meter: meter._id, externalBatchId: input.externalBatchId })
     if (!batch) throw error
     if (batch.payloadHash !== payloadHash) throw new AppError('This batch ID was already used with different CSV content. Use a new batch ID.', 409, 'IMPORT_BATCH_PAYLOAD_MISMATCH')
-    if (batch.status === 'completed') return { batch, replayed: true }
-    if (batch.status === 'processing' && Date.now() - batch.startedAt.getTime() < 15 * 60 * 1000) throw new AppError('This import batch is already processing.', 409, 'IMPORT_BATCH_IN_PROGRESS')
-    batch.status = 'processing'; batch.received = readings.length; batch.inserted = 0
-    batch.duplicates = 0; batch.errorSummary = undefined; batch.startedAt = new Date(); batch.completedAt = undefined
-    await batch.save()
+    if (batch.status === 'completed') return { batch: publicBatch(batch), replayed: true }
+    const staleBefore = new Date(Date.now() - 15 * 60 * 1000)
+    const claimed = await MeterImportBatch.findOneAndUpdate(
+      { _id: batch._id, $or: [{ status: 'failed' }, { status: 'processing', startedAt: { $lte: staleBefore } }] },
+      { $set: { status: 'processing', received: readings.length, inserted: 0, duplicates: 0, errorSummary: null, startedAt: new Date(), completedAt: null } },
+      { new: true },
+    )
+    if (!claimed) throw new AppError('This import batch is already processing.', 409, 'IMPORT_BATCH_IN_PROGRESS')
+    batch = claimed
   }
 
   try {
@@ -47,7 +53,7 @@ export async function importMeterCsv({ organizationId, userId, meterId, input })
     batch.status = 'completed'
     batch.completedAt = new Date()
     await batch.save()
-    return { batch, replayed: false }
+    return { batch: publicBatch(batch), replayed: false }
   } catch (error) {
     batch.status = 'failed'
     batch.errorSummary = error.message?.slice(0, 500) || 'Import failed.'
@@ -60,7 +66,7 @@ export async function importMeterCsv({ organizationId, userId, meterId, input })
 export async function listMeterImports({ organizationId, meterId, limit }) {
   const filter = { organization: organizationId }
   if (meterId) filter.meter = meterId
-  return MeterImportBatch.find(filter).populate('facility', 'name code').populate('meter', 'name serialNumber').sort({ createdAt: -1 }).limit(limit).lean()
+  return MeterImportBatch.find(filter).select('-payloadHash').populate('facility', 'name code').populate('meter', 'name serialNumber').sort({ createdAt: -1 }).limit(limit).lean()
 }
 
 export async function reconcileUtilityInvoice({ organizationId, userId, input }) {
