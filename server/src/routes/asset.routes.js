@@ -8,7 +8,8 @@ import { authorize, requireOrganization } from '../middleware/authorize.js'
 import { validate } from '../middleware/validate.js'
 import {
   createFacilitySchema, createMeterSchema, ingestReadingsSchema,
-  facilityParamsSchema, organizationParamsSchema, meterParamsSchema, listReadingsQuerySchema,
+  facilityParamsSchema, organizationParamsSchema, meterParamsSchema,
+  listMetersQuerySchema, listReadingsQuerySchema,
 } from '../schemas/asset.schema.js'
 
 const router = Router()
@@ -18,9 +19,9 @@ router.get('/:organizationId/facilities', validate(organizationParamsSchema, 'pa
 router.post('/:organizationId/facilities', validate(organizationParamsSchema, 'params'), requireOrganization, authorize('owner', 'admin', 'operator'), validate(createFacilitySchema), createFacility)
 router.get('/:organizationId/facilities/:facilityId', validate(facilityParamsSchema, 'params'), requireOrganization, getFacility)
 
-router.get('/:organizationId/meters', validate(organizationParamsSchema, 'params'), requireOrganization, listMeters)
+router.get('/:organizationId/meters', validate(organizationParamsSchema, 'params'), requireOrganization, validate(listMetersQuerySchema, 'query'), listMeters)
 router.post('/:organizationId/meters', validate(organizationParamsSchema, 'params'), requireOrganization, authorize('owner', 'admin', 'operator'), validate(createMeterSchema), createMeter)
 router.post('/:organizationId/meters/:meterId/readings', validate(meterParamsSchema, 'params'), requireOrganization, authorize('owner', 'admin', 'operator'), validate(ingestReadingsSchema), ingestReadings)
-router.get('/:organizationId/meters/:meterId/readings', validate(meterParamsSchema, 'params'), requireOrganization, listReadings)
+router.get('/:organizationId/meters/:meterId/readings', validate(meterParamsSchema, 'params'), requireOrganization, validate(listReadingsQuerySchema, 'query'), listReadings)
 
 export default router
