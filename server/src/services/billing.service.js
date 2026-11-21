@@ -27,12 +27,27 @@ async function hourlyReadings({ organizationId, facilityId, from, to, timezone }
     } },
     { $match: { localDate: { $gte: from, $lte: to } } },
     { $group: {
-      _id: { date: '$localDate', hour: '$hour', dayOfWeek: '$dayOfWeek' },
+      _id: { date: '$localDate', hour: '$hour', dayOfWeek: '$dayOfWeek', meter: '$meter' },
       energyKwh: { $sum: '$energyKwh' },
       peakDemandKw: { $max: '$demandKw' },
+      demandSamples: { $sum: { $cond: [{ $eq: [{ $ifNull: ['$demandKw', null] }, null] }, 0, 1] } },
       averagePowerFactor: { $avg: '$powerFactor' },
       readingCount: { $sum: 1 },
       estimatedReadings: { $sum: { $cond: [{ $eq: ['$quality', 'estimated'] }, 1, 0] } },
+    } },
+    { $group: {
+      _id: { date: '$_id.date', hour: '$_id.hour', dayOfWeek: '$_id.dayOfWeek' },
+      energyKwh: { $sum: '$energyKwh' },
+      peakDemandKw: { $sum: { $ifNull: ['$peakDemandKw', 0] } },
+      meterCount: { $sum: 1 },
+      demandMeterCount: { $sum: { $cond: [{ $gt: ['$demandSamples', 0] }, 1, 0] } },
+      averagePowerFactor: { $avg: '$averagePowerFactor' },
+      readingCount: { $sum: '$readingCount' },
+      estimatedReadings: { $sum: '$estimatedReadings' },
+    } },
+    { $project: {
+      _id: 1, energyKwh: 1, averagePowerFactor: 1, readingCount: 1, estimatedReadings: 1,
+      peakDemandKw: { $cond: [{ $eq: ['$meterCount', '$demandMeterCount'] }, '$peakDemandKw', null] },
     } },
     { $sort: { '_id.date': 1, '_id.hour': 1 } },
   ])
@@ -52,6 +67,7 @@ export function calculateCosts(rows, tariff) {
   let energyKwh = 0
   let energyCharge = 0
   let peakDemandKw = null
+  let incompleteDemandHours = 0
   let powerFactorTotal = 0
   let powerFactorSamples = 0
   let readingCount = 0
@@ -65,6 +81,7 @@ export function calculateCosts(rows, tariff) {
     energyKwh += row.energyKwh
     energyCharge += charge
     if (row.peakDemandKw != null) peakDemandKw = Math.max(peakDemandKw ?? 0, row.peakDemandKw)
+    else incompleteDemandHours += 1
     if (row.averagePowerFactor != null) { powerFactorTotal += row.averagePowerFactor; powerFactorSamples += 1 }
     readingCount += row.readingCount
     estimatedReadings += row.estimatedReadings
@@ -76,7 +93,8 @@ export function calculateCosts(rows, tariff) {
     daily.readingCount += row.readingCount
     dailyMap.set(row._id.date, daily)
   }
-  const demandCharge = peakDemandKw == null ? 0 : peakDemandKw * tariff.demandChargePerKw
+  const demandCharge = peakDemandKw == null || incompleteDemandHours > 0 ? 0 : peakDemandKw * tariff.demandChargePerKw
+  const billablePeakDemandKw = incompleteDemandHours > 0 ? null : peakDemandKw
   const fixedCharge = tariff.fixedCharge
   const subtotal = energyCharge + demandCharge + fixedCharge
   const tax = subtotal * tariff.taxRatePercent / 100
@@ -90,7 +108,7 @@ export function calculateCosts(rows, tariff) {
   return {
     summary: {
       totalEnergyKwh: round(energyKwh), energyCharge: round(energyCharge),
-      peakDemandKw: peakDemandKw == null ? null : round(peakDemandKw),
+      peakDemandKw: billablePeakDemandKw == null ? null : round(billablePeakDemandKw),
       demandCharge: round(demandCharge), fixedCharge: round(fixedCharge),
       subtotal: round(subtotal), taxRatePercent: tariff.taxRatePercent,
       tax: round(tax), total: round(total),
@@ -106,7 +124,7 @@ export function calculateCosts(rows, tariff) {
     ],
     daily,
     insights: [
-      ...(peakDemandKw == null && tariff.demandChargePerKw > 0 ? ['Demand charges are configured, but demand-kW telemetry is missing; no demand charge was estimated.'] : []),
+      ...(tariff.demandChargePerKw > 0 && incompleteDemandHours > 0 ? ['Demand charges are configured, but measured kW coverage is incomplete for ' + incompleteDemandHours + ' observed hour buckets; no demand charge was estimated.'] : []),
       ...(estimatedReadings ? [estimatedReadings + ' estimated-quality readings are included in the estimate.'] : []),
       ...(potentialShiftSavings > 0 ? ['Illustrative load-shifting opportunity: shifting 10% of energy used in higher-priced periods to the lowest configured rate could save about ' + round(potentialShiftSavings) + ' ' + tariff.currency + ' before battery losses and operational constraints.'] : []),
     ],
