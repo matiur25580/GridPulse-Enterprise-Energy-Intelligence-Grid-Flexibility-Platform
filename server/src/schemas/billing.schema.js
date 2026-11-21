@@ -47,3 +47,5 @@ export const estimateBillSchema = z.object({
   })
 
 export const listBillsQuerySchema = z.object({ facilityId: objectId.optional(), limit: z.coerce.number().int().min(1).max(100).default(25) })
+
+export const listTariffsQuerySchema = z.object({ facilityId: objectId.optional() })
