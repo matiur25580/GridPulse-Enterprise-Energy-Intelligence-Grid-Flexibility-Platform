@@ -70,11 +70,15 @@ onMounted(loadWorkspace)
 
 function parseHours(value: string) {
   if (!value.trim()) return []
-  return [...new Set(value.split(',').map((part) => Number(part.trim())).filter((hour) => Number.isInteger(hour) && hour >= 0 && hour <= 23))]
+  const parsed = value.split(',').map((part) => Number(part.trim()))
+  if (parsed.some((hour) => !Number.isInteger(hour) || hour < 0 || hour > 23)) return []
+  return [...new Set(parsed)]
 }
 function parseDays(value: string) {
   if (!value.trim()) return []
-  return [...new Set(value.split(',').map((part) => Number(part.trim())).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6))]
+  const parsed = value.split(',').map((part) => Number(part.trim()))
+  if (parsed.some((day) => !Number.isInteger(day) || day < 0 || day > 6)) return []
+  return [...new Set(parsed)]
 }
 async function saveTariff() {
   error.value = ''; success.value = ''
