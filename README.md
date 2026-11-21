@@ -172,7 +172,13 @@ Run the seed with a strong local-only password:
 DEMO_SEED_EMAIL=demo@gridpulse.local DEMO_SEED_PASSWORD='Choose-A-Local-Demo-Password-2026' npm run seed:demo
 ```
 
-See [docs/demo-environment.md](docs/demo-environment.md) for the complete setup, safety boundaries, data profile, and screenshot instructions. The [GridPulse demo gallery workflow](.github/workflows/demo-gallery.yml) launches an ephemeral MongoDB-backed app, signs in through the real UI, and captures twelve PNG screenshots with Playwright Chromium. Open **Actions → GridPulse demo gallery** and run the workflow; download the `gridpulse-dashboard-screenshots` artifact. Generated binary captures are intentionally delivered as a 14-day artifact rather than auto-committed to `main`.
+See [docs/demo-environment.md](docs/demo-environment.md) for the complete setup, safety boundaries, data profile, and screenshot instructions. The [GridPulse demo gallery workflow](.github/workflows/demo-gallery.yml) launches an ephemeral MongoDB-backed app, signs in through the real UI, exercises the reporting and scenario flows, and captures twelve PNG screenshots with Playwright Chromium.
+
+**Latest successful browser gallery:** [View the GitHub Actions run and download the `gridpulse-dashboard-screenshots` artifact](https://github.com/matiur25580/GridPulse-Enterprise-Energy-Intelligence-Grid-Flexibility-Platform/actions/runs/44921373198). The run completed successfully on 21 November 2026; the artifact contains twelve authenticated browser captures and is retained for 14 days. The workflow fails rather than publishing a gallery if report generation fails validation.
+
+The capture pack contains: portfolio overview, portfolio KPIs, consumption and demand trends, facility and meter operations, forecasting and anomaly intelligence, energy optimization, renewable and grid flexibility, sustainability reporting, tariff and billing intelligence, integrations and reconciliation, alerts and incident command, and incident evaluation history.
+
+The committed SVG gallery remains a lightweight illustrative fallback. It is not represented as a set of production screenshots; the authenticated PNG captures are available from the linked workflow artifact.
 
 ## Capabilities
 
