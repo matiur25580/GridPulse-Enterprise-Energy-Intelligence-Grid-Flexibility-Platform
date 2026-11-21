@@ -4,7 +4,7 @@
 
 GridPulse is a MEVN-based platform for multi-site energy monitoring, demand forecasting, energy optimization, renewable asset visibility, and demand-response workflows.
 
-> **Project status:** Implemented foundations include Express/Mongoose configuration, authentication with rotating refresh sessions, organization membership and role checks, facility and meter management, tenant-scoped energy-reading ingestion/query APIs, and a tenant-scoped energy overview analytics endpoint. The frontend now includes registration/login, refresh-cookie session restoration, organization selection, logout, and tenant-scoped live analytics loading. Empty telemetry states are shown explicitly; no synthetic production metrics are presented. Explainable forecasting, anomaly detection, rolling-origin model evaluation, and an advisory tariff-aware optimization simulator are implemented; renewable asset operations, demand-response workflows, and production hardening remain planned.
+> **Project status:** Implemented foundations include Express/Mongoose configuration, authentication with rotating refresh sessions, organization membership and role checks, facility and meter management, tenant-scoped energy-reading ingestion/query APIs, and a tenant-scoped energy overview analytics endpoint. The frontend now includes registration/login, refresh-cookie session restoration, organization selection, logout, and tenant-scoped live analytics loading. Empty telemetry states are shown explicitly; no synthetic production metrics are presented. Explainable forecasting, anomaly detection, rolling-origin model evaluation, an advisory tariff-aware optimization simulator, and an initial solar/demand-response scenario engine are implemented; persistent renewable asset configuration, settlement-grade demand response, and production hardening remain planned.
 
 ## Product goals
 
@@ -166,6 +166,18 @@ This first intelligence release is deterministic and explainable. It is not a tr
 `POST /organizations/:organizationId/optimization/simulate` runs an organization-scoped, read-only planning scenario using the previous 7–90 days of valid and estimated telemetry. The request supplies off-peak and peak tariff rates, peak hours (UTC), and optional battery capacity, power, state-of-charge, reserve, and round-trip efficiency. The response compares representative-day baseline and optimized cost/energy/peak demand, provides estimated savings and a 24-hour dispatch schedule, and returns data coverage plus explicit model assumptions.
 
 The simulator averages observed daily energy by UTC hour, shifts battery charging into configured off-peak hours, and dispatches stored energy during peak hours subject to capacity, power, reserve, and efficiency limits. If demand measurements are absent, hourly energy is used as an indicative average-kW proxy and disclosed in the response. It does not infer utility tariff rules, demand charges, taxes, battery degradation, or local-time daylight-saving behavior. Results are indicative scenario estimates, not guaranteed savings or an operational dispatch plan. No commands are sent to meters, batteries, or grid equipment.
+
+
+### Renewable energy and demand-response intelligence
+
+`POST /organizations/:organizationId/grid-flexibility/simulate` evaluates the previous 7–90 days of organization telemetry. The request supplies selected event hours (UTC), a hypothetical grid-import reduction percentage, an incentive rate per curtailed kWh, and a grid emissions factor.
+
+- **Renewable analytics:** readings from active meters classified as `solar` are treated as generation. Active `main` meters provide facility load; `submeter` readings are used only as a disclosed fallback when no main-meter readings exist. The service estimates hourly self-consumption as the minimum of load and solar generation, and estimates surplus/export as solar generation above load. These are profile-derived estimates, not revenue-grade export measurements.
+- **Demand response:** the scenario applies the configured percentage reduction to modeled grid import during selected event hours. It reports curtailed energy, post-event import, and an illustrative incentive estimate. It does not establish a verified baseline, prove that flexible capacity is available, or execute dispatch.
+- **Emissions:** avoided CO2e is estimated from the supplied grid emissions factor multiplied by modeled solar self-consumption plus demand-response reduction. Annualized tonnes are a straight-line 365-day projection, not a forecast.
+- **Data quality:** valid and estimated readings are included; flagged readings are excluded. Hourly profiles are averaged across observed UTC days. Missing hours remain missing/zero in the schedule and are identified in coverage fields.
+
+The API returns assumptions, data coverage, hourly load/generation, estimated self-consumption/export, demand-response impact and emissions. No commands are sent to meters, inverters, batteries, or grid equipment. Financial incentives exclude program qualification, settlement rules, demand baselines, penalties, taxes and fees.
 
 ### Tenant and role controls
 
