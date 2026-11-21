@@ -112,7 +112,7 @@ watch(() => props.organizationId, () => { result.value = null; error.value = '' 
           <div class="optimization-schedule">
             <div class="optimization-panel-head"><div><h3>24-hour dispatch profile</h3><p>Baseline load vs modeled grid energy · UTC</p></div></div>
             <div class="schedule-bars">
-              <div v-for="item in result.schedule" :key="item.hourUtc" class="schedule-hour" :title="hourLabel(item.hourUtc)+': '+fmt(item.gridEnergyKwh)+' kWh grid energy'">
+              <div v-for="item in result.schedule" :key="item.hourUtc" class="schedule-hour" :title="hourLabel(item.hourUtc)+': '+(item.observed ? fmt(item.gridEnergyKwh)+' kWh grid energy' : 'no telemetry')">
                 <div class="schedule-bar-track"><i class="schedule-baseline" :style="{height:(item.baselineEnergyKwh/maxSchedule*100)+'%'}"></i><i class="schedule-grid" :class="{peak:item.period==='peak'}" :style="{height:(item.gridEnergyKwh/maxSchedule*100)+'%'}"></i></div>
                 <small v-if="item.hourUtc%3===0">{{String(item.hourUtc).padStart(2,'0')}}</small>
               </div>
