@@ -18,4 +18,5 @@ const alertEvaluationRunSchema = new mongoose.Schema({
 }, { timestamps: true })
 
 alertEvaluationRunSchema.index({ organization: 1, startedAt: -1 })
+alertEvaluationRunSchema.index({ createdAt: 1 }, { expireAfterSeconds: 90 * 24 * 60 * 60 })
 export const AlertEvaluationRun = mongoose.model('AlertEvaluationRun', alertEvaluationRunSchema)
