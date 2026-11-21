@@ -161,6 +161,7 @@ export async function estimateAndSaveBill({ organizationId, userId, input }) {
     throw new AppError('The selected tariff is not effective for the entire billing period.', 422, 'TARIFF_OUTSIDE_BILLING_PERIOD')
   }
   const timezone = facility.timezone || 'UTC'
+  try { new Intl.DateTimeFormat('en-US', { timeZone: timezone }) } catch { throw new AppError('Facility timezone is invalid. Set a valid IANA timezone before billing.', 422, 'INVALID_FACILITY_TIMEZONE') }
   const current = await hourlyReadings({ organizationId, facilityId: facility._id, from: input.from, to: input.to, timezone })
   const calculated = calculateCosts(current.rows, tariff)
   const periodDays = daysBetween(input.from, input.to)
