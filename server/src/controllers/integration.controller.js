@@ -8,7 +8,7 @@ export const importCsv = asyncHandler(async (request, response) => {
     organizationId: organizationId(request), userId: request.user.id,
     meterId: request.params.meterId, input: request.body,
   })
-  response.status(result.replayed ? 200 : 202).json({ data: result })
+  response.status(result.replayed ? 200 : 201).json({ data: result })
 })
 
 export const getImports = asyncHandler(async (request, response) => {
