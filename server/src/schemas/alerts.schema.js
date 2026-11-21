@@ -17,6 +17,8 @@ export const createAlertRuleSchema = z.object({
 }).superRefine((value, context) => {
   if (value.type === 'high_consumption' && value.thresholdKwh == null) context.addIssue({ code: 'custom', path: ['thresholdKwh'], message: 'A positive kWh threshold is required.' })
   if (value.type !== 'high_consumption' && value.thresholdKwh != null) context.addIssue({ code: 'custom', path: ['thresholdKwh'], message: 'Consumption thresholds only apply to high-consumption rules.' })
+  const allowedTargets = value.type === 'high_consumption' ? ['facility', 'meter'] : value.type === 'meter_silent' ? ['meter'] : ['gateway']
+  if (!allowedTargets.includes(value.targetType)) context.addIssue({ code: 'custom', path: ['targetType'], message: 'Target type does not match the selected alert condition.' })
 })
 
 export const updateAlertRuleSchema = z.object({ status: z.enum(['active', 'disabled']) })
