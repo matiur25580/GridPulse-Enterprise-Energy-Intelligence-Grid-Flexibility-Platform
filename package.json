@@ -18,7 +18,8 @@
     "build": "npm run build --workspace client",
     "test": "npm test --workspace server",
     "check": "npm test && npm run build",
-    "start": "npm run start --workspace server"
+    "start": "npm run start --workspace server",
+    "seed:demo": "npm run seed:demo --workspace server"
   },
   "devDependencies": {
     "concurrently": "^9.1.2"
