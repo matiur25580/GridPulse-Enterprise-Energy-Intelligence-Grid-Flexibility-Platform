@@ -9,7 +9,7 @@ GridPulse is a MEVN-based platform for multi-site energy monitoring, demand fore
 ## Product goals
 
 - Give organizations a unified view of energy use across facilities and meters.
-- Ingest and explore time-series electricity readings.
+- Ingest and explore time-series electricity readings from CSV batches and signed IoT gateway webhooks.
 - Forecast demand and explain model performance.
 - Recommend cost-aware, constraint-aware energy schedules.
 - Model facility-specific tariffs and estimate transparent energy bills.
@@ -352,6 +352,7 @@ Roles available: `owner`, `admin`, `operator`, `analyst`, and `viewer`. All memb
 3. **Idempotent ingestion:** event identifiers prevent duplicate readings on retries.
 4. **Explainable intelligence:** future forecasts and recommendations will expose inputs, assumptions, constraints, and evaluation metrics.
 5. **Safe-by-default operations:** initial product workflows simulate control actions; they do not directly operate physical industrial equipment.
+6. **Authenticated telemetry:** generic gateway webhooks use timestamped HMAC signatures, encrypted-at-rest credentials, organization-scoped meter mappings, and idempotent event IDs.
 6. **Honest product status:** implemented behavior is distinguished from roadmap items.
 
 ## Roadmap
@@ -370,7 +371,7 @@ Roles available: `owner`, `admin`, `operator`, `analyst`, and `viewer`. All memb
 
 ## Security
 
-Never commit real credentials, production connection strings, private meter data, or customer information. Keep `.env` untracked. Configure HTTPS and `COOKIE_SECURE=true` in production.
+Never commit real credentials, production connection strings, gateway signing secrets, the `INTEGRATION_ENCRYPTION_KEY`, private meter data, or customer information. Keep `.env` untracked. Configure a persistent random `INTEGRATION_ENCRYPTION_KEY` (at least 32 characters) before provisioning gateway sources; back it up securely because existing encrypted gateway secrets depend on it. Configure HTTPS and `COOKIE_SECURE=true` in production.
 
 ## License
 
