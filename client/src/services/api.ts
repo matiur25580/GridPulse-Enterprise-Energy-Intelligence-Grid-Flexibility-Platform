@@ -340,8 +340,16 @@ export interface EnergyIncident {
   resolutionReason?: 'condition_cleared' | 'operator_resolved'
   rule: { _id: string; name: string; type: string } | string
 }
+export interface AlertNotificationSubscription {
+  enabled: boolean
+  emails: string[]
+  updatedAt?: string
+}
+
 export const alertsApi = {
   rules: (organizationId: string) => apiRequest<AlertRule[]>(`/organizations/${encodeURIComponent(organizationId)}/alerts/rules`),
+  notificationSettings: (organizationId: string) => apiRequest<AlertNotificationSubscription>(`/organizations/${encodeURIComponent(organizationId)}/alerts/notifications`),
+  saveNotificationSettings: (organizationId: string, input: { enabled: boolean; emails: string[] }) => apiRequest<AlertNotificationSubscription>(`/organizations/${encodeURIComponent(organizationId)}/alerts/notifications`, { method: 'PUT', body: JSON.stringify(input) }),
   createRule: (organizationId: string, input: { name: string; type: AlertRule['type']; targetId: string; targetType: AlertRule['targetType']; thresholdKwh?: number; windowMinutes: number; staleAfterMinutes: number; severity: AlertRule['severity'] }) =>
     apiRequest<AlertRule>(`/organizations/${encodeURIComponent(organizationId)}/alerts/rules`, { method: 'POST', body: JSON.stringify(input) }),
   setRuleStatus: (organizationId: string, ruleId: string, status: 'active' | 'disabled') =>
