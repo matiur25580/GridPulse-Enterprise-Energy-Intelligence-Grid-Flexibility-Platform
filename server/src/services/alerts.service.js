@@ -156,3 +156,8 @@ export async function updateIncidentStatus({ organizationId, incidentId, status,
   await incident.save()
   return incident
 }
+
+export async function listAlertEvaluations({ organizationId, limit = 20 }) {
+  const { AlertEvaluationRun } = await import('../models/alert-evaluation-run.model.js')
+  return AlertEvaluationRun.find({ organization: organizationId }).sort({ startedAt: -1 }).limit(limit).lean()
+}
