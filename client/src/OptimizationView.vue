@@ -45,7 +45,7 @@ watch(() => props.organizationId, () => { result.value = null; error.value = '' 
 <template>
   <section class="optimization-module">
     <div class="optimization-heading">
-      <div><label class="eyebrow">FLEXIBILITY &amp; COST INTELLIGENCE</label><h2>Energy optimization</h2><p>Model time-of-use tariffs and battery flexibility against your organization's observed load profile.</p></div>
+      <div><label class="eyebrow">FLEXIBILITY &amp; COST INTELLIGENCE</label><h2>Energy optimization</h2><p>Model time-of-use tariffs and battery flexibility against your organization's observed load profile. Costs use the same currency unit as your tariff inputs.</p></div>
       <span class="optimization-mode">SCENARIO SIMULATOR</span>
     </div>
     <div class="optimization-layout">
@@ -94,6 +94,9 @@ watch(() => props.organizationId, () => { result.value = null; error.value = '' 
       <article class="optimization-panel optimization-results">
         <div class="optimization-panel-head"><div><h3>Scenario impact</h3><p>Estimated representative-day performance.</p></div><span v-if="result" class="optimization-live">SIMULATED</span></div>
         <div v-if="!result" class="optimization-empty"><span>↗</span><b>Awaiting scenario</b><p>Configure tariff rates and optional battery parameters, then run the simulation to compare baseline and optimized operations.</p></div>
+        <template v-else-if="result.dataCoverage.hoursWithReadings===0">
+          <div class="optimization-empty"><span>!</span><b>No telemetry available</b><p>No valid or estimated energy readings were found in this history window. Add meter readings before evaluating optimization scenarios.</p></div>
+        </template>
         <template v-else>
           <div class="optimization-kpis">
             <div><small>DAILY COST SAVINGS</small><strong>{{money(result.impact.dailyCostSavings)}}</strong><em>{{result.impact.costSavingsPercent == null ? 'No baseline cost' : fmt(result.impact.costSavingsPercent)+'% estimated'}}</em></div>
