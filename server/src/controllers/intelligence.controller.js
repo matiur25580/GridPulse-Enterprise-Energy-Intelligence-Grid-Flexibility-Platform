@@ -1,5 +1,6 @@
 import { EnergyReading } from '../models/energy-reading.model.js'
 import { Meter } from '../models/meter.model.js'
+import { Facility } from '../models/facility.model.js'
 import { buildEnergyForecast, detectConsumptionAnomalies, evaluateEnergyForecast } from '../services/energy-intelligence.service.js'
 import { asyncHandler } from '../utils/async-handler.js'
 
@@ -61,6 +62,9 @@ export const getEnergyIntelligence = asyncHandler(async (request, response) => {
     ]),
   ])
 
+  const facilityIds = [...new Set(facilityDaily.map((item) => String(item._id.facilityId)))]
+  const facilities = facilityIds.length ? await Facility.find({ _id: { $in: facilityIds }, organization }).select('name code').lean() : []
+  const facilityLookup = new Map(facilities.map((item) => [String(item._id), item]))
   const detected = detectConsumptionAnomalies(meterDaily)
   const meterIds = [...new Set(detected.map((item) => String(item.meterId)))]
   const meters = meterIds.length
@@ -84,6 +88,7 @@ export const getEnergyIntelligence = asyncHandler(async (request, response) => {
       backtest: evaluateEnergyForecast(daily, backtestDays),
       facilityBacktests: [...new Set(facilityDaily.map((item) => String(item._id.facilityId)))].map((facilityId) => ({
         facilityId,
+        facility: facilityLookup.has(facilityId) ? { name: facilityLookup.get(facilityId).name, code: facilityLookup.get(facilityId).code } : null,
         ...evaluateEnergyForecast(facilityDaily.filter((item) => String(item._id.facilityId) === facilityId).map((item) => ({ _id: item._id.date, energyKwh: item.energyKwh })), backtestDays),
       })),
       anomalies,
