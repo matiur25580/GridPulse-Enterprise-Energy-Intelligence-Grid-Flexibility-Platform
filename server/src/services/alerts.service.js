@@ -22,7 +22,8 @@ export async function createAlertRule({ organizationId, userId, input }) {
     : input.type === 'meter_silent' ? ['meter'] : ['gateway']
   if (!allowed.includes(targetType)) throw new AppError('The selected target type is not valid for this alert.', 422, 'ALERT_TARGET_TYPE_INVALID')
   await assertRuleTarget({ organizationId, targetId: input.targetId, targetType })
-  return AlertRule.create({ organization: organizationId, createdBy: userId, ...input })
+  const { targetId, ...ruleInput } = input
+  return AlertRule.create({ organization: organizationId, createdBy: userId, ...ruleInput, target: targetId })
 }
 
 export async function listAlertRules({ organizationId }) {
