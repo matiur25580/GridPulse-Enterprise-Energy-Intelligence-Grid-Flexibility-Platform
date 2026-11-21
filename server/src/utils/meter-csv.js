@@ -48,7 +48,7 @@ export function parseMeterReadingsCsv(input) {
     seen.add(item.externalId)
     const recordedAt = new Date(item.recordedAt)
     const energyKwh = Number(item.energyKwh)
-    if (!item.recordedAt || !Number.isFinite(recordedAt.getTime()) || !Number.isFinite(energyKwh) || energyKwh < 0 || energyKwh > 100_000_000) {
+    if (!item.recordedAt || !/(?:Z|[+-]\\d{2}:\\d{2})$/i.test(item.recordedAt) || !Number.isFinite(recordedAt.getTime()) || !Number.isFinite(energyKwh) || energyKwh < 0 || energyKwh > 100_000_000) {
       throw new AppError('CSV row ' + (index + 2) + ' has an invalid timestamp or energyKwh value.', 400, 'CSV_INVALID_READING')
     }
     const reading = { externalId: item.externalId, recordedAt, energyKwh, source: 'import', quality: item.quality || 'valid' }
