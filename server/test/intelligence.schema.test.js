@@ -3,11 +3,11 @@ import assert from 'node:assert/strict'
 import { intelligenceQuerySchema } from '../src/schemas/intelligence.schema.js'
 
 test('intelligence query applies bounded defaults', () => {
-  assert.deepEqual(intelligenceQuerySchema.parse({}), { historyDays: 30, horizonDays: 7 })
+  assert.deepEqual(intelligenceQuerySchema.parse({}), { historyDays: 30, horizonDays: 7, backtestDays: 14 })
 })
 
 test('intelligence query accepts supported history and forecast windows', () => {
-  assert.deepEqual(intelligenceQuerySchema.parse({ historyDays: '90', horizonDays: '14' }), { historyDays: 90, horizonDays: 14 })
+  assert.deepEqual(intelligenceQuerySchema.parse({ historyDays: '90', horizonDays: '14' }), { historyDays: 90, horizonDays: 14, backtestDays: 14 })
 })
 
 test('intelligence query rejects excessive or insufficient windows', () => {
