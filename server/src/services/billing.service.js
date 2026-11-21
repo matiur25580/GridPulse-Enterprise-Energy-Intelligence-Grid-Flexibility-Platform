@@ -119,12 +119,18 @@ export async function createTariffPlan({ organizationId, userId, input }) {
   if (!facility) throw new AppError('Active facility not found in this organization.', 404, 'FACILITY_NOT_FOUND')
   const effectiveFrom = new Date(input.effectiveFrom + 'T00:00:00.000Z')
   const effectiveTo = input.effectiveTo ? new Date(input.effectiveTo + 'T23:59:59.999Z') : null
-  const overlap = await TariffPlan.exists({
+  const overlaps = await TariffPlan.find({
     organization: organizationId, facility: facility._id, status: 'active',
     effectiveFrom: { $lte: effectiveTo ?? new Date('9999-12-31T23:59:59.999Z') },
     $or: [{ effectiveTo: null }, { effectiveTo: { $gte: effectiveFrom } }],
-  })
-  if (overlap) throw new AppError('Tariff effective dates overlap an existing active plan. Create a non-overlapping version.', 409, 'TARIFF_PERIOD_OVERLAP')
+  }).select('_id effectiveFrom effectiveTo').lean()
+  for (const existing of overlaps) {
+    if (existing.effectiveTo == null && existing.effectiveFrom < effectiveFrom) {
+      await TariffPlan.updateOne({ _id: existing._id, organization: organizationId, effectiveTo: null }, { $set: { effectiveTo: new Date(effectiveFrom.getTime() - 1) } })
+    } else {
+      throw new AppError('Tariff effective dates overlap an existing active plan. Choose a later start date or correct the existing tariff version.', 409, 'TARIFF_PERIOD_OVERLAP')
+    }
+  }
   const tariff = await TariffPlan.create({
     organization: organizationId, facility: facility._id, name: input.name,
     currency: input.currency, defaultRatePerKwh: input.defaultRatePerKwh,
