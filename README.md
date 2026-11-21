@@ -62,7 +62,7 @@ npm run dev
 
 Set `MONGODB_URI` to your Atlas or local replica-set connection string. Replace the sample JWT secret with a randomly generated value of at least 32 characters before deployment.
 
-The Vue application runs at http://localhost:5173 and the API runs at http://localhost:4000.
+The Vue application runs at http://localhost:5173 and the API runs at http://localhost:4000.\n\nRun the available checks with `npm test --workspace server` and build the frontend with `npm run build`.
 
 ## API
 
@@ -198,7 +198,7 @@ The API returns assumptions, data coverage, hourly load/generation, estimated se
 - **Indicative emissions:** included electricity consumption multiplied by the user-supplied grid emissions factor. The factor defaults to 0.4 kg CO2e/kWh and is configurable from 0 to 5. It is not a verified inventory or regulatory factor selection.
 - **Exports:** CSV contains summary, daily, facility, meter and quality sections. Print/PDF creates a formatted report through the browser's print dialog.
 
-The report is intended for operational management and internal review. It does not calculate energy cost because no persisted, facility-specific tariff/billing ledger is implemented. It does not establish GHG Protocol boundary completeness, market-based emissions, Scope 2 contractual instruments, assurance, or regulatory compliance. UTC is used for daily aggregation and report date boundaries.
+The report is intended for operational management and internal review. This energy-report endpoint does not embed bill line items; facility-specific tariff plans and estimated billing snapshots are available in the separate Billing workspace. It does not establish GHG Protocol boundary completeness, market-based emissions, Scope 2 contractual instruments, assurance, or regulatory compliance. UTC is used for daily aggregation and report date boundaries.
 
 
 ### Enterprise billing and energy cost intelligence
@@ -226,7 +226,7 @@ The calculator is an operational planning estimate, not a utility-issued invoice
 
 Every facility, meter, and reading query is scoped to the organization resolved from the authenticated user's active membership. A meter can only be registered against a facility in that same organization. The organization ID in the URL is a lookup context, never proof of access.
 
-Roles available: `owner`, `admin`, `operator`, `analyst`, and `viewer`. All members can read; only owner/admin/operator can create facilities, register meters, or ingest readings.
+Roles available: `owner`, `admin`, `operator`, `analyst`, and `viewer`. All members can read; only owner/admin/operator can create facilities, register meters, ingest readings, or configure tariff versions. Owner/admin/operator/analyst can generate bill estimates; viewer is read-only.
 
 ## Architecture principles
 
@@ -244,7 +244,7 @@ Roles available: `owner`, `admin`, `operator`, `analyst`, and `viewer`. All memb
 3. Facilities, meters, and energy-reading ingestion — APIs, models, and authenticated management UI implemented; database-backed integration tests remain.
 4. Portfolio analytics endpoint and authenticated live-data dashboard — initial implementation complete; integration tests remain.
 5. Explainable baseline forecasting, anomaly detection, rolling-origin backtesting, and authenticated intelligence dashboard — initial implementation complete; advanced model evaluation and monitoring remain.
-6. Tariff-aware optimization scenario API and battery dispatch simulation — initial implementation complete; tariff persistence and billing-grade validation remain.
+6. Tariff-aware optimization scenario API and battery dispatch simulation — initial implementation complete; direct integration with the persisted billing tariff catalog and production validation remain.
 7. Renewable energy and demand-response advisory simulation — initial implementation complete; metered exports, settlement, and production integration remain.
 8. Enterprise energy reporting with CSV and print-to-PDF exports — initial implementation complete; formal emissions inventory, audit controls, and compliance workflows remain.
 9. Facility-specific tariff versioning, time-of-use cost calculation, demand charges, saved bill estimates, period comparisons, and CSV exports — initial implementation complete; utility integrations, invoice settlement, and jurisdiction-specific tariff rules remain.
