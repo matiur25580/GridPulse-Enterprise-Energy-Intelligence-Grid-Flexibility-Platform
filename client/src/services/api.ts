@@ -346,10 +346,28 @@ export const alertsApi = {
     apiRequest<AlertRule>(`/organizations/${encodeURIComponent(organizationId)}/alerts/rules`, { method: 'POST', body: JSON.stringify(input) }),
   setRuleStatus: (organizationId: string, ruleId: string, status: 'active' | 'disabled') =>
     apiRequest<AlertRule>(`/organizations/${encodeURIComponent(organizationId)}/alerts/rules/${encodeURIComponent(ruleId)}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+  evaluations: (organizationId: string) => apiRequest<AlertEvaluationRun[]>(`/organizations/${encodeURIComponent(organizationId)}/alerts/evaluations?limit=10`),
   incidents: (organizationId: string, status?: EnergyIncident['status']) =>
     apiRequest<EnergyIncident[]>(`/organizations/${encodeURIComponent(organizationId)}/alerts/incidents${status ? '?status=' + status : ''}`),
   evaluate: (organizationId: string) =>
     apiRequest<{ evaluatedRules: number; created: number; updated: number; recovered: number; clear: number; skipped: number }>(`/organizations/${encodeURIComponent(organizationId)}/alerts/evaluate`, { method: 'POST', body: '{}' }),
   updateIncident: (organizationId: string, incidentId: string, status: 'acknowledged' | 'resolved') =>
     apiRequest<EnergyIncident>(`/organizations/${encodeURIComponent(organizationId)}/alerts/incidents/${encodeURIComponent(incidentId)}`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+}
+
+export interface AlertEvaluationRun {
+  _id: string
+  trigger: 'scheduler' | 'manual'
+  status: 'running' | 'succeeded' | 'partial' | 'failed'
+  startedAt: string
+  finishedAt?: string
+  durationMs?: number
+  evaluatedRules: number
+  created: number
+  updated: number
+  recovered: number
+  clear: number
+  skipped: number
+  errorCode?: string
+  errorMessage?: string
 }
