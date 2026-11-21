@@ -19,6 +19,10 @@ const meterForm = ref({ facilityId: '', name: '', serialNumber: '', meterType: '
 const readingForm = ref({ recordedAt: new Date().toISOString().slice(0, 16), energyKwh: '', demandKw: '', powerFactor: '', source: 'manual', quality: 'valid' })
 
 const selectedMeterName = computed(() => meters.value.find((m) => m._id === selectedMeter.value)?.name ?? '')
+const activeFacilities = computed(() => facilities.value.filter((facility) => facility.status === 'active'))
+const activeMeters = computed(() => meters.value.filter((meter) => meter.status === 'active'))
+const canRegisterMeter = computed(() => !saving.value && activeFacilities.value.some((facility) => facility._id === meterForm.value.facilityId))
+const canSubmitReading = computed(() => !saving.value && Boolean(selectedMeter.value) && activeMeters.value.some((meter) => meter._id === selectedMeter.value))
 function clearMessages() { error.value = ''; success.value = '' }
 async function loadFacilities() {
   facilities.value = await assetApi.facilities(props.organizationId)
@@ -123,12 +127,12 @@ onMounted(refresh)
       </article>
       <article v-if="canWrite" class="asset-panel"><div class="asset-panel-title"><h3>Register a meter</h3><span>ADMIN ACTION</span></div>
         <form class="asset-form" @submit.prevent="createMeter">
-          <label>Parent facility<select v-model="meterForm.facilityId" required><option value="" disabled>Select a facility</option><option v-for="f in facilities.filter(x=>x.status==='active')" :key="f._id" :value="f._id">{{f.name}}</option></select></label>
+          <label>Parent facility<select v-model="meterForm.facilityId" required><option value="" disabled>Select a facility</option><option v-for="f in activeFacilities" :key="f._id" :value="f._id">{{f.name}}</option></select></label>
           <label>Meter name<input v-model.trim="meterForm.name" required minlength="2" maxlength="120" placeholder="Main incoming meter"></label>
           <label>Serial number<input v-model.trim="meterForm.serialNumber" required minlength="2" maxlength="80" placeholder="MTR-0001"></label>
           <label>Meter type<select v-model="meterForm.meterType"><option value="main">Main</option><option value="submeter">Submeter</option><option value="solar">Solar</option><option value="battery">Battery</option><option value="ev_charger">EV charger</option><option value="generator">Generator</option></select></label>
           <label>Rated power (kW)<input v-model="meterForm.ratedPowerKw" type="number" min="0.001" max="1000000" step="any" placeholder="Optional"></label>
-          <button class="asset-primary" type="submit" :disabled="saving || !facilities.some(x=>x._id===meterForm.facilityId && x.status==='active')">{{saving ? 'Saving…' : '＋ Register meter'}}</button>
+          <button class="asset-primary" type="submit" :disabled="!canRegisterMeter">{{saving ? 'Saving…' : '＋ Register meter'}}</button>
         </form>
       </article>
     </div>
@@ -141,13 +145,13 @@ onMounted(refresh)
       </article>
       <article v-if="canWrite" class="asset-panel"><div class="asset-panel-title"><h3>Ingest a reading</h3><span>MANUAL ENTRY</span></div>
         <form class="asset-form" @submit.prevent="submitReading">
-          <label>Target meter<select v-model="selectedMeter" required><option value="" disabled>Select a meter</option><option v-for="m in meters.filter(x=>x.status==='active')" :key="m._id" :value="m._id">{{m.name}} · {{m.serialNumber}}</option></select></label>
+          <label>Target meter<select v-model="selectedMeter" required><option value="" disabled>Select a meter</option><option v-for="m in activeMeters" :key="m._id" :value="m._id">{{m.name}} · {{m.serialNumber}}</option></select></label>
           <label>Recorded at<input v-model="readingForm.recordedAt" type="datetime-local" required></label>
           <label>Energy consumed (kWh)<input v-model="readingForm.energyKwh" type="number" min="0" max="100000000" step="any" required placeholder="124.75"></label>
           <label>Demand (kW)<input v-model="readingForm.demandKw" type="number" min="0" max="1000000" step="any" placeholder="Optional"></label>
           <label>Power factor<input v-model="readingForm.powerFactor" type="number" min="0" max="1" step="0.001" placeholder="0 to 1"></label>
           <div class="asset-two-col"><label>Source<select v-model="readingForm.source"><option value="manual">Manual</option><option value="gateway">Gateway</option><option value="import">Import</option><option value="simulation">Simulation</option></select></label><label>Quality<select v-model="readingForm.quality"><option value="valid">Valid</option><option value="estimated">Estimated</option><option value="flagged">Flagged</option></select></label></div>
-          <button class="asset-primary" type="submit" :disabled="saving || !selectedMeter || !meters.some(x=>x._id===selectedMeter && x.status==='active')">{{saving ? 'Submitting…' : '↥ Submit reading'}}</button>
+          <button class="asset-primary" type="submit" :disabled="!canSubmitReading">{{saving ? 'Submitting…' : '↥ Submit reading'}}</button>
         </form>
       </article>
     </div>
