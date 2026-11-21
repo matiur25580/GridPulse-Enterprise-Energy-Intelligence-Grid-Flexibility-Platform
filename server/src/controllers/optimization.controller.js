@@ -4,7 +4,7 @@ import { asyncHandler } from '../utils/async-handler.js'
 
 export const runOptimizationScenario = asyncHandler(async (request, response) => {
   const now = new Date()
-  const { historyDays, ...scenario } = request.validatedBody
+  const { historyDays, ...scenario } = request.body
   const from = new Date(now.getTime() - historyDays * 86400000)
   const rows = await EnergyReading.aggregate([
     {
