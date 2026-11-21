@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
 export const optimizationParamsSchema = z.object({
-  organizationId: z.string().regex(/^[a-f\\d]{24}$/i),
+  organizationId: z.string().regex(/^[a-f\d]{24}$/i),
 })
 
 export const optimizationScenarioSchema = z.object({
