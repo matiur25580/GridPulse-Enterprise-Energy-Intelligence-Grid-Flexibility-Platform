@@ -66,6 +66,16 @@ try {
   if (!(await page.locator('.reporting-result-head').isVisible())) {
     throw new Error('Demo report did not render successfully.')
   }
+  await Promise.race([
+    page.locator('.reporting-result-head').waitFor({ state: 'visible' }),
+    page.locator('.reporting-error').waitFor({ state: 'visible' }),
+  ])
+  if (await page.locator('.reporting-error').isVisible()) {
+    throw new Error('Demo report generation failed: ' + (reportResponses.at(-1)?.body || await page.locator('.reporting-error').innerText()))
+  }
+  if (!(await page.locator('.reporting-result-head').isVisible())) {
+    throw new Error('Demo report did not render successfully.')
+  }
   await page.waitForTimeout(1200)
 
   for (const [fileName, selector] of captures) {
@@ -73,6 +83,11 @@ try {
     await section.waitFor({ state: 'visible' })
     await section.scrollIntoViewIfNeeded()
     await page.waitForTimeout(250)
+    if (fileName === '01-portfolio-overview.png') {
+      await page.screenshot({ path: outputDirectory + '/' + fileName, fullPage: false, animations: 'disabled', caret: 'hide' })
+      process.stdout.write('Captured ' + fileName + '\\n')
+      continue
+    }
     if (fileName === '01-portfolio-overview.png') {
       await page.screenshot({ path: outputDirectory + '/' + fileName, fullPage: false, animations: 'disabled', caret: 'hide' })
       process.stdout.write('Captured ' + fileName + '\\n')
