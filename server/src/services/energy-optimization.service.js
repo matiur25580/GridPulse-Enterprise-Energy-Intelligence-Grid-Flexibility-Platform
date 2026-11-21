@@ -34,6 +34,12 @@ export function simulateEnergyOptimization(hourlyProfile, input) {
     }
   }
 
+  const hasDemandMeasurements = hourlyProfile.some((item) => item.demandKw != null)
+  const hasMissingDemandMeasurements = hourlyProfile.some((item) => item.demandKw == null)
+  const demandProxy = hasDemandMeasurements
+    ? (hasMissingDemandMeasurements ? 'maximum observed demand kW where available; missing-hour demand falls back to hourly energy kWh as indicative average kW' : 'maximum observed demand kW by hour')
+    : 'hourly energy kWh treated as average kW; indicative only'
+
   const baselineCost = hours.reduce((sum, item) => sum + item.energyKwh * item.rate, 0)
   const optimizedCost = hours.reduce((sum, item) => sum + Math.max(0, item.energyKwh + item.chargeKwh - item.dischargeKwh) * item.rate, 0)
   const baselinePeakKw = Math.max(0, ...hours.map((item) => item.baselineDemandKw))
@@ -47,7 +53,7 @@ export function simulateEnergyOptimization(hourlyProfile, input) {
       profile: 'average observed hourly day across the selected history window',
       tariff: 'flat off-peak and peak rates; configured peak hours are interpreted in UTC',
       battery: batteryEnabled ? 'idealized one-hour dispatch with configured power, capacity, reserve and round-trip efficiency' : 'battery dispatch disabled; set capacity and power above zero to simulate storage',
-      demandProxy: hourlyProfile.some((item) => item.demandKw != null) ? 'maximum observed demand kW by hour' : 'hourly energy kWh treated as average kW; indicative only',
+      demandProxy,
       control: 'planning simulation only; no equipment commands are sent',
     },
     baseline: {
