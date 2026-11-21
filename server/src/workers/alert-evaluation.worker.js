@@ -24,6 +24,12 @@ async function acquireLease(ownerId, now = new Date()) {
   }
 }
 
+async function renewLease(ownerId) {
+  const leaseUntil = new Date(Date.now() + env.ALERT_EVALUATION_LEASE_SECONDS * 1000)
+  const result = await AlertEvaluationLease.updateOne({ _id: LEASE_ID, ownerId }, { $set: { leaseUntil } })
+  return result.modifiedCount === 1 || result.matchedCount === 1
+}
+
 async function releaseLease(ownerId) {
   await AlertEvaluationLease.updateOne(
     { _id: LEASE_ID, ownerId },
@@ -62,11 +68,16 @@ export async function runScheduledAlertEvaluation() {
   try {
     const acquired = await acquireLease(ownerId)
     if (!acquired) return { skipped: true, reason: 'lease_held' }
+    const heartbeat = setInterval(() => {
+      renewLease(ownerId).catch(error => console.error('GridPulse alert lease renewal failed:', error))
+    }, Math.max(20_000, Math.floor(env.ALERT_EVALUATION_LEASE_SECONDS * 1000 / 3)))
+    heartbeat.unref?.()
     try {
       const organizations = await AlertRule.distinct('organization', { status: 'active' })
       for (const organizationId of organizations) await evaluateOrganization(organizationId)
       return { skipped: false, organizations: organizations.length }
     } finally {
+      clearInterval(heartbeat)
       await releaseLease(ownerId)
     }
   } finally {
