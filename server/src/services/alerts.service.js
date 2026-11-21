@@ -1,4 +1,5 @@
 import { AlertRule } from '../models/alert-rule.model.js'
+import { AlertEvaluationRun } from '../models/alert-evaluation-run.model.js'
 import { EnergyIncident } from '../models/energy-incident.model.js'
 import { EnergyReading } from '../models/energy-reading.model.js'
 import { Meter } from '../models/meter.model.js'
@@ -158,6 +159,5 @@ export async function updateIncidentStatus({ organizationId, incidentId, status,
 }
 
 export async function listAlertEvaluations({ organizationId, limit = 20 }) {
-  const { AlertEvaluationRun } = await import('../models/alert-evaluation-run.model.js')
   return AlertEvaluationRun.find({ organization: organizationId }).sort({ startedAt: -1 }).limit(limit).lean()
 }
