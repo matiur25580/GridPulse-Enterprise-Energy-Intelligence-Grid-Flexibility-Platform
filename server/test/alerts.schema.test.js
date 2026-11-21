@@ -22,3 +22,9 @@ test('bounds incident filters and only allows forward incident transitions', () 
   assert.equal(updateIncidentSchema.safeParse({ status: 'acknowledged' }).success, true)
   assert.equal(updateIncidentSchema.safeParse({ status: 'open' }).success, false)
 })
+
+test('enforces compatible alert target types', () => {
+  assert.equal(createAlertRuleSchema.safeParse({ name: 'Gateway silence', type: 'gateway_silent', targetId: id, targetType: 'gateway' }).success, true)
+  assert.equal(createAlertRuleSchema.safeParse({ name: 'Gateway silence', type: 'gateway_silent', targetId: id, targetType: 'meter' }).success, false)
+  assert.equal(createAlertRuleSchema.safeParse({ name: 'Meter silence', type: 'meter_silent', targetId: id, targetType: 'facility' }).success, false)
+})
