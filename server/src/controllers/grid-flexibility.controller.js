@@ -1,5 +1,5 @@
 import { EnergyReading } from '../models/energy-reading.model.js'
-import { simulateGridFlexibility } from '../services/grid-flexibility.service.js'
+import { evaluateGridFlexibility } from '../services/grid-flexibility.service.js'
 import { asyncHandler } from '../utils/async-handler.js'
 
 export const runGridFlexibilityScenario = asyncHandler(async (request, response) => {
