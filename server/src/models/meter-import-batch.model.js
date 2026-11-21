@@ -6,6 +6,7 @@ const meterImportBatchSchema = new mongoose.Schema({
   meter: { type: mongoose.Schema.Types.ObjectId, ref: 'Meter', required: true },
   externalBatchId: { type: String, required: true, trim: true, maxlength: 120 },
   fileName: { type: String, required: true, trim: true, maxlength: 180 },
+  payloadHash: { type: String, required: true, minlength: 64, maxlength: 64 },
   source: { type: String, enum: ['csv'], default: 'csv' },
   status: { type: String, enum: ['processing', 'completed', 'failed'], default: 'processing' },
   received: { type: Number, default: 0 },
