@@ -18,7 +18,7 @@ export const getIncidents = asyncHandler(async (request, response) => {
   response.json({ data: await listEnergyIncidents({ organizationId: organizationId(request), filters: request.query }) })
 })
 export const evaluateAlerts = asyncHandler(async (request, response) => {
-  const now = request.body.now ? new Date(request.body.now) : new Date()
+  const now = new Date()
   const startedAt = new Date()
   const run = await AlertEvaluationRun.create({ organization: organizationId(request), trigger: 'manual', status: 'running', startedAt })
   try {
