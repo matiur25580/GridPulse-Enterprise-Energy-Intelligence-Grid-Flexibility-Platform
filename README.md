@@ -4,7 +4,7 @@
 
 GridPulse is a MEVN-based platform for multi-site energy monitoring, demand forecasting, energy optimization, renewable asset visibility, and demand-response workflows.
 
-> **Project status:** Implemented foundations include Express/Mongoose configuration, authentication with rotating refresh sessions, organization membership and role checks, facility and meter management, tenant-scoped energy-reading ingestion/query APIs, and a tenant-scoped energy overview analytics endpoint. The frontend currently presents an explicitly labelled illustrative dashboard preview; authenticated live-data UI integration remains future work. Forecasting, optimization, renewable asset operations, and grid workflows remain planned modules.
+> **Project status:** Implemented foundations include Express/Mongoose configuration, authentication with rotating refresh sessions, organization membership and role checks, facility and meter management, tenant-scoped energy-reading ingestion/query APIs, and a tenant-scoped energy overview analytics endpoint. The frontend now includes registration/login, refresh-cookie session restoration, organization selection, logout, and tenant-scoped live analytics loading. Empty telemetry states are shown explicitly; no synthetic production metrics are presented. Forecasting, optimization, renewable asset operations, and grid workflows remain planned modules.
 
 ## Product goals
 
@@ -21,7 +21,7 @@ GridPulse is a MEVN-based platform for multi-site energy monitoring, demand fore
 - **Backend:** Node.js 22+, Express 5
 - **Data:** MongoDB 7+ with Mongoose
 - **Security:** bcrypt password hashing, JWT access tokens, rotating opaque refresh tokens, HTTP-only cookies, Zod validation, Helmet, organization-scoped authorization
-- **Quality:** Node's built-in test runner; schema validation tests included.
+- **Quality:** Node's built-in test runner; schema validation tests included. Frontend TypeScript/Vite production build is available through `npm run build`.
 
 ## Repository layout
 
@@ -131,6 +131,15 @@ All endpoints are prefixed with `/api/v1`.
 ```
 
 Reading `externalId` values are idempotency keys scoped to an organization and meter. Replayed IDs are not inserted again. A batch accepts 1–1,000 readings; duplicate IDs inside the same batch are rejected. Readings are stored in kWh with optional demand and electrical measurements.
+
+
+### Frontend authentication and live analytics
+
+The client calls the same-origin `/api/v1` endpoints through the Vite development proxy. Access tokens are held in application memory; refresh tokens remain in HTTP-only cookies and are never exposed to JavaScript. On a protected request that returns 401, the API client attempts one refresh and retries the request once. Reloading the page attempts session restoration before showing the workspace.
+
+After sign-in, the client loads the user's organizations and allows switching between memberships. The selected organization ID is used only as request context; the API independently verifies membership and scopes every analytics query to the authenticated organization.
+
+The overview requests `GET /organizations/:organizationId/analytics/overview` for the selected 7-, 30-, or 90-day window. Charts, summary metrics, and facility rows use the returned API data. If no readings exist, the UI displays an empty state rather than fabricated operational figures. New accounts can be created from the sign-in screen; the registration API creates the first organization and owner membership.
 
 ### Tenant and role controls
 
