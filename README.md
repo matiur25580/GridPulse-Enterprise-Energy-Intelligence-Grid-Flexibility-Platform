@@ -4,7 +4,7 @@
 
 GridPulse is a MEVN-based platform for multi-site energy monitoring, demand forecasting, energy optimization, renewable asset visibility, and demand-response workflows.
 
-> **Project status:** Implemented foundations include Express/Mongoose configuration, authentication with rotating refresh sessions, organization membership and role checks, facility and meter management, tenant-scoped energy-reading ingestion/query APIs, and a tenant-scoped energy overview analytics endpoint. The frontend now includes registration/login, refresh-cookie session restoration, organization selection, logout, and tenant-scoped live analytics loading. Empty telemetry states are shown explicitly; no synthetic production metrics are presented. A first explainable forecasting and anomaly-detection API is implemented; model evaluation, optimization, renewable asset operations, and grid workflows remain planned modules.
+> **Project status:** Implemented foundations include Express/Mongoose configuration, authentication with rotating refresh sessions, organization membership and role checks, facility and meter management, tenant-scoped energy-reading ingestion/query APIs, and a tenant-scoped energy overview analytics endpoint. The frontend now includes registration/login, refresh-cookie session restoration, organization selection, logout, and tenant-scoped live analytics loading. Empty telemetry states are shown explicitly; no synthetic production metrics are presented. Explainable forecasting, anomaly detection, rolling-origin model evaluation, and an advisory tariff-aware optimization simulator are implemented; renewable asset operations, demand-response workflows, and production hardening remain planned.
 
 ## Product goals
 
@@ -188,7 +188,7 @@ Roles available: `owner`, `admin`, `operator`, `analyst`, and `viewer`. All memb
 2. Authentication, organizations, memberships, tenant-aware authorization — initial implementation complete; integration hardening remains.
 3. Facilities, meters, and energy-reading ingestion — APIs, models, and authenticated management UI implemented; database-backed integration tests remain.
 4. Portfolio analytics endpoint and authenticated live-data dashboard — initial implementation complete; integration tests remain.
-5. Explainable baseline forecasting and anomaly detection API plus authenticated intelligence dashboard — initial implementation complete; backtesting and model evaluation remain.
+5. Explainable baseline forecasting, anomaly detection, rolling-origin backtesting, and authenticated intelligence dashboard — initial implementation complete; advanced model evaluation and monitoring remain.
 6. Optimization scenarios and demand-response simulation.
 7. Renewable assets, billing, reporting, audit, and operational hardening.
 
