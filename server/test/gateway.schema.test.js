@@ -19,3 +19,9 @@ test('rejects timezone-naive, invalid and oversized event payloads', () => {
   assert.equal(gatewayEventsSchema.safeParse({ events: [{ eventId: 'evt', externalMeterId: 'm', recordedAt: '2026-11-21T10:00:00Z', energyKwh: -1 }] }).success, false)
   assert.equal(gatewayEventsSchema.safeParse({ events: Array.from({ length: 501 }, (_, index) => ({ eventId: String(index), externalMeterId: 'm', recordedAt: '2026-11-21T10:00:00Z', energyKwh: 1 })) }).success, false)
 })
+
+test('rejects duplicate event identifiers within one external meter batch', () => {
+  const event = { eventId: 'same-event', externalMeterId: 'meter-a', recordedAt: '2026-11-21T10:00:00Z', energyKwh: 2 }
+  assert.equal(gatewayEventsSchema.safeParse({ events: [event, event] }).success, false)
+  assert.equal(gatewayEventsSchema.safeParse({ events: [event, { ...event, externalMeterId: 'meter-b' }] }).success, true)
+})
