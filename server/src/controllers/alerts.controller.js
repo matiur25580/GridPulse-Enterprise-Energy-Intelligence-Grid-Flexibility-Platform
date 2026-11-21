@@ -1,5 +1,6 @@
 import { asyncHandler } from '../utils/async-handler.js'
-import { createAlertRule, evaluateEnergyAlerts, listAlertRules, listEnergyIncidents, setAlertRuleStatus, updateIncidentStatus } from '../services/alerts.service.js'
+import { AlertEvaluationRun } from '../models/alert-evaluation-run.model.js'
+import { createAlertRule, evaluateEnergyAlerts, listAlertRules, listEnergyIncidents, listAlertEvaluations, setAlertRuleStatus, updateIncidentStatus } from '../services/alerts.service.js'
 
 const organizationId = (request) => request.organization._id
 
@@ -18,7 +19,21 @@ export const getIncidents = asyncHandler(async (request, response) => {
 })
 export const evaluateAlerts = asyncHandler(async (request, response) => {
   const now = request.body.now ? new Date(request.body.now) : new Date()
-  response.json({ data: await evaluateEnergyAlerts({ organizationId: organizationId(request), now, userId: request.user.id }) })
+  const startedAt = new Date()
+  const run = await AlertEvaluationRun.create({ organization: organizationId(request), trigger: 'manual', status: 'running', startedAt })
+  try {
+    const summary = await evaluateEnergyAlerts({ organizationId: organizationId(request), now, userId: request.user.id })
+    const finishedAt = new Date()
+    await AlertEvaluationRun.updateOne({ _id: run._id }, { $set: { ...summary, status: 'succeeded', finishedAt, durationMs: finishedAt - startedAt } })
+    response.json({ data: summary })
+  } catch (error) {
+    const finishedAt = new Date()
+    await AlertEvaluationRun.updateOne({ _id: run._id }, { $set: { status: 'failed', finishedAt, durationMs: finishedAt - startedAt, errorCode: typeof error.code === 'string' ? error.code.slice(0, 80) : 'EVALUATION_FAILED', errorMessage: String(error.message || 'Alert evaluation failed').slice(0, 500) } })
+    throw error
+  }
+})
+export const getEvaluations = asyncHandler(async (request, response) => {
+  response.json({ data: await listAlertEvaluations({ organizationId: organizationId(request), limit: request.query.limit }) })
 })
 export const updateIncident = asyncHandler(async (request, response) => {
   response.json({ data: await updateIncidentStatus({ organizationId: organizationId(request), incidentId: request.params.incidentId, status: request.body.status, userId: request.user.id }) })
