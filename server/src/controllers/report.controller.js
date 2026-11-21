@@ -1,4 +1,3 @@
-import { Organization } from '../models/organization.model.js'
 import { buildEnergyReport } from '../services/energy-report.service.js'
 import { asyncHandler } from '../utils/async-handler.js'
 
