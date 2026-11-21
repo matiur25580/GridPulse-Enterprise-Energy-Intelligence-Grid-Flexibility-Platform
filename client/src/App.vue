@@ -8,6 +8,7 @@ import { BarChart, LineChart } from 'echarts/charts'
 import { GridComponent, TooltipComponent } from 'echarts/components'
 import { useAuthStore } from './stores/auth'
 import { organizationApi, type EnergyOverview } from './services/api'
+import AssetsView from './AssetsView.vue'
 use([CanvasRenderer, BarChart, LineChart, GridComponent, TooltipComponent])
 
 const auth = useAuthStore()
@@ -119,7 +120,7 @@ watch([activeOrganizationId, period, user], () => { if (user.value) void loadAna
           <article class="panel"><div class="panel-head"><div><h2>Energy consumption</h2><p>Daily portfolio usage · UTC aggregation</p></div><div class="tabs"><button v-for="v in ['7D','30D','90D']" :key="v" :class="{selected:period===v}" @click="period=v">{{v}}</button></div></div><div class="legend"><span><i class="lime-dot"></i> Energy consumed</span><b>{{ totalEnergy }} kWh</b></div><VChart class="chart" :option="energyOption" autoresize v-if="daily.length"/><div v-else class="chart-empty">Energy readings will appear here once ingested.</div></article>
           <article class="panel"><div class="panel-head"><div><h2>Peak demand</h2><p>Maximum interval demand per day</p></div><label class="trend-tag">● LIVE DATA</label></div><div class="legend"><span><i class="cyan-dot"></i> Peak demand</span><b>{{ peakDemand }} kW</b></div><VChart class="chart" :option="demandOption" autoresize v-if="daily.length"/><div v-else class="chart-empty">Demand readings will appear here once available.</div></article>
         </section>
-        <section id="facilities" class="panel facility-panel"><div class="panel-head"><div><h2>Facility performance</h2><p>Top facilities by measured energy consumption</p></div><span class="live-tag">ORGANIZATION DATA</span></div><div class="table-scroll"><table><thead><tr><th>FACILITY</th><th>ENERGY CONSUMPTION</th><th>PEAK DEMAND</th><th>READINGS</th></tr></thead><tbody><tr v-for="f in facilityRows" :key="f.facilityId"><td><b>{{f.name}}</b><small>{{f.code}}</small></td><td class="energy">{{number(f.energyKwh,2)}} kWh</td><td>{{f.peakDemandKw == null ? '—' : number(f.peakDemandKw,2) + ' kW'}}</td><td>{{number(f.readingCount)}}</td></tr><tr v-if="!facilityRows.length"><td colspan="4" class="empty-row">No facility consumption records for this period.</td></tr></tbody></table></div></section>
+        <AssetsView id="facilities" :organization-id="activeOrganizationId" :role="activeOrganization?.role ?? ''" />
         <footer>GRIDPULSE <span>· ENTERPRISE ENERGY INTELLIGENCE</span><small>{{ activeOrganization?.name }} · {{ lastUpdated ? 'Updated ' + lastUpdated : 'Awaiting data' }} · <button @click="loadAnalytics">Refresh</button> · <button @click="signOut">Sign out</button></small></footer>
       </div>
     </section>
