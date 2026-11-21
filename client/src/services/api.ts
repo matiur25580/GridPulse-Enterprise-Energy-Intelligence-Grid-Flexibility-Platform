@@ -127,6 +127,31 @@ export const optimizationApi = {
     }),
 }
 
+
+export interface GridFlexibilityInput {
+  historyDays: number
+  eventHours: number[]
+  reductionPercent: number
+  incentivePerKwh: number
+  gridEmissionFactorKgPerKwh: number
+}
+export interface GridFlexibilityResult {
+  generatedAt: string
+  range: { from: string; to: string; requestedDays: number }
+  dataCoverage: { loadSource: 'main' | 'submeter'; hoursWithLoad: number; hoursWithSolar: number; observedDays: number; includedQuality: string }
+  assumptions: Record<string, string>
+  renewable: { dailyGenerationKwh: number; dailySelfConsumedKwh: number; dailyEstimatedExportKwh: number; selfConsumptionPercent: number | null; solarCoveragePercent: number | null }
+  demandResponse: { eventHours: number[]; dailyBaselineGridImportKwh: number; dailyCurtailedKwh: number; dailyPostEventGridImportKwh: number; reductionPercent: number; estimatedIncentive: number; incentiveRatePerKwh: number }
+  emissions: { gridEmissionFactorKgPerKwh: number; dailyAvoidedKgCo2e: number; annualizedAvoidedTonnesCo2e: number }
+  schedule: Array<{ hourUtc: number; observedLoad: boolean; observedSolar: boolean; loadKwh: number; solarGenerationKwh: number; selfConsumedSolarKwh: number; estimatedExportKwh: number; baselineGridImportKwh: number; demandResponseKwh: number; postEventGridImportKwh: number; event: boolean }>
+}
+export const gridFlexibilityApi = {
+  simulate: (organizationId: string, input: GridFlexibilityInput) =>
+    apiRequest<GridFlexibilityResult>(`/organizations/${encodeURIComponent(organizationId)}/grid-flexibility/simulate`, {
+      method: 'POST', body: JSON.stringify(input),
+    }),
+}
+
 export interface User { id: string; name: string; email: string }
 export interface Organization { id: string; name: string; slug: string; role: string }
 export interface EnergyOverview {
