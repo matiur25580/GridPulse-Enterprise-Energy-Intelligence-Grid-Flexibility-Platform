@@ -15,12 +15,13 @@ export function simulateEnergyOptimization(hourlyProfile, input) {
     const demandKw = observed?.demandKw == null ? energyKwh : Math.max(0, Number(observed.demandKw))
     const isPeak = peakHours.has(hour)
     const rate = isPeak ? input.peakRatePerKwh : input.offPeakRatePerKwh
-    return { hour, energyKwh, baselineDemandKw: demandKw, rate, isPeak, chargeKwh: 0, dischargeKwh: 0 }
+    return { hour, energyKwh, baselineDemandKw: demandKw, rate, isPeak, observed: Boolean(observed), chargeKwh: 0, dischargeKwh: 0 }
   })
 
   // Dispatch chronologically so energy charged later in the day cannot serve an earlier peak.
   if (batteryEnabled) {
     for (const item of hours) {
+      if (!item.observed) continue
       if (!item.isPeak) {
         const availableInput = Math.min(input.batteryPowerKw, (capacity - stateOfCharge) / oneWayEfficiency)
         item.chargeKwh = Math.max(0, availableInput)
@@ -70,6 +71,7 @@ export function simulateEnergyOptimization(hourlyProfile, input) {
     },
     schedule: hours.map((item) => ({
       hourUtc: item.hour,
+      observed: item.observed,
       baselineEnergyKwh: round(item.energyKwh),
       gridEnergyKwh: round(Math.max(0, item.energyKwh + item.chargeKwh - item.dischargeKwh)),
       chargeKwh: round(item.chargeKwh),
