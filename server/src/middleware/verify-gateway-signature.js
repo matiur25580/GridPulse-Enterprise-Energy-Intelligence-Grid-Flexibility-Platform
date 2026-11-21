@@ -15,7 +15,7 @@ export const verifyGatewaySignature = asyncHandler(async (request, _response, ne
   const timestamp = request.get('x-gridpulse-timestamp')
   const signature = request.get('x-gridpulse-signature')
   const seconds = Number(timestamp)
-  if (!timestamp || !Number.isInteger(seconds) || Math.abs(Date.now() / 1000 - seconds) > 300) {
+  if (!timestamp || !/^\\d{10,11}$/.test(timestamp) || !Number.isSafeInteger(seconds) || Math.abs(Date.now() / 1000 - seconds) > 300) {
     throw new AppError('Gateway request timestamp is missing, invalid, or expired.', 401, 'GATEWAY_TIMESTAMP_INVALID')
   }
   if (!Buffer.isBuffer(request.rawBody)) throw new AppError('Signed raw request body is unavailable.', 400, 'GATEWAY_RAW_BODY_REQUIRED')
