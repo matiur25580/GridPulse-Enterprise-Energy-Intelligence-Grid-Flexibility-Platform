@@ -27,7 +27,8 @@ async function generateReport() {
   } finally { loading.value = false }
 }
 function csvCell(value: unknown) {
-  const text = value == null ? '' : String(value)
+  let text = value == null ? '' : String(value)
+  if (typeof value === 'string' && /^[=+@\\-\\t\\r]/.test(text)) text = "'" + text
   return '"' + text.replaceAll('"', '""') + '"'
 }
 function downloadCsv() {
@@ -71,7 +72,8 @@ function downloadCsv() {
   document.body.appendChild(anchor); anchor.click(); anchor.remove(); URL.revokeObjectURL(url)
 }
 function escapeHtml(value: unknown) {
-  return String(value ?? '').replace(/[&<>"']/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[character] ?? character)
+  const entities: Record<string, string> = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }
+  return String(value ?? '').replace(/[&<>"']/g, (character) => entities[character] ?? character)
 }
 function printPdf() {
   if (!report.value) return
