@@ -28,7 +28,7 @@ test('estimates solar self-consumption, surplus export, and demand response impa
 test('returns null renewable ratios when solar generation is unavailable', () => {
   const result = evaluateGridFlexibility([{ hour: 18, loadKwh: 10 }], input)
   assert.equal(result.renewable.selfConsumptionPercent, null)
-  assert.equal(result.renewable.solarCoveragePercent, 0)
+  assert.equal(result.renewable.solarCoveragePercent, null)
 })
 
 test('does not invent solar or load in missing hours', () => {
