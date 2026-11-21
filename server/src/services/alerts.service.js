@@ -44,6 +44,9 @@ export async function listEnergyIncidents({ organizationId, filters }) {
 
 async function inspectRule(rule, now) {
   if (rule.type === 'high_consumption') {
+    const TargetModel = rule.targetType === 'facility' ? Facility : Meter
+    const activeTarget = await TargetModel.findOne({ _id: rule.target, organization: rule.organization, status: 'active' }).select('_id').lean()
+    if (!activeTarget) return { triggered: false }
     const since = new Date(now.getTime() - rule.windowMinutes * 60_000)
     const match = { organization: rule.organization, recordedAt: { $gte: since, $lte: now }, quality: { $in: ['valid', 'estimated'] } }
     if (rule.targetType === 'meter') match.meter = rule.target
