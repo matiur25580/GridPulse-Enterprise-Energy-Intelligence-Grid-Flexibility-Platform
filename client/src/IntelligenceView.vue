@@ -11,6 +11,7 @@ use([CanvasRenderer, LineChart, GridComponent, TooltipComponent, LegendComponent
 const props = defineProps<{ organizationId: string }>()
 const historyDays = ref(30)
 const horizonDays = ref(7)
+const backtestDays = ref(14)
 const result = ref<EnergyIntelligence | null>(null)
 const loading = ref(false)
 const error = ref('')
@@ -31,6 +32,17 @@ const chartData = computed(() => {
   }
   return { labels, actual, predicted, lower, upper }
 })
+const backtestOption = computed(() => ({
+  tooltip: { trigger: 'axis', valueFormatter: (v: number | null) => v == null ? '—' : format(v, 2) + ' kWh' },
+  legend: { top: 0, textStyle: { color: '#9aadb5', fontSize: 10 } },
+  grid: { left: 10, right: 16, top: 34, bottom: 8, containLabel: true },
+  xAxis: { type: 'category', data: result.value?.backtest.predictions.map(x => x.date) ?? [], axisLabel: { color: '#8fa5af', fontSize: 9, hideOverlap: true } },
+  yAxis: { type: 'value', name: 'kWh', axisLabel: { color: '#8fa5af', fontSize: 9 }, splitLine: { lineStyle: { color: 'rgba(176,204,210,.09)' } } },
+  series: [
+    { name: 'Actual', type: 'line', data: result.value?.backtest.predictions.map(x => x.actualKwh) ?? [], smooth: true, symbolSize: 4, lineStyle: { color: '#a3e635', width: 2 } },
+    { name: 'Backtest prediction', type: 'line', data: result.value?.backtest.predictions.map(x => x.predictedKwh) ?? [], smooth: true, symbolSize: 4, lineStyle: { color: '#58c7d8', width: 2, type: 'dashed' } },
+  ],
+}))
 const forecastOption = computed(() => ({
   tooltip: { trigger: 'axis', valueFormatter: (v: number | null) => v == null ? '—' : format(v, 2) + ' kWh' },
   legend: { top: 0, textStyle: { color: '#9aadb5', fontSize: 10 } },
@@ -49,7 +61,7 @@ async function load() {
   loading.value = true
   error.value = ''
   try {
-    result.value = await intelligenceApi.overview(props.organizationId, historyDays.value, horizonDays.value)
+    result.value = await intelligenceApi.overview(props.organizationId, historyDays.value, horizonDays.value, backtestDays.value)
     updatedAt.value = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
   } catch (cause) {
     error.value = cause instanceof Error ? cause.message : 'Unable to load energy intelligence.'
@@ -57,7 +69,7 @@ async function load() {
   } finally { loading.value = false }
 }
 watch(() => props.organizationId, () => void load())
-watch([historyDays, horizonDays], () => void load())
+watch([historyDays, horizonDays, backtestDays], () => void load())
 onMounted(load)
 </script>
 
