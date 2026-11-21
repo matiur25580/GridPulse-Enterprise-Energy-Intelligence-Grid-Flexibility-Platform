@@ -19,6 +19,7 @@ const energyIncidentSchema = new mongoose.Schema({
   acknowledgedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
   resolvedAt: Date,
   resolvedBy: { type: mongoose.Schema.Types.ObjectId, ref: 'User' },
+  resolutionReason: { type: String, enum: ['condition_cleared', 'operator_resolved'] },
 }, { timestamps: true })
 
 energyIncidentSchema.index({ organization: 1, status: 1, severity: 1, lastSeenAt: -1 })
