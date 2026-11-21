@@ -1,6 +1,6 @@
 import { EnergyReading } from '../models/energy-reading.model.js'
 import { Meter } from '../models/meter.model.js'
-import { buildEnergyForecast, detectConsumptionAnomalies } from '../services/energy-intelligence.service.js'
+import { buildEnergyForecast, detectConsumptionAnomalies, evaluateEnergyForecast } from '../services/energy-intelligence.service.js'
 import { asyncHandler } from '../utils/async-handler.js'
 
 const startOfUtcDay = (date) => {
@@ -14,6 +14,7 @@ export const getEnergyIntelligence = asyncHandler(async (request, response) => {
   const today = startOfUtcDay(now)
   const historyDays = request.validatedQuery.historyDays
   const horizonDays = request.validatedQuery.horizonDays
+  const backtestDays = request.validatedQuery.backtestDays
   const from = new Date(today.getTime() - (historyDays - 1) * 86400000)
   const organization = request.organization._id
   const match = {
@@ -22,7 +23,7 @@ export const getEnergyIntelligence = asyncHandler(async (request, response) => {
     quality: { $in: ['valid', 'estimated'] },
   }
 
-  const [daily, meterDaily] = await Promise.all([
+  const [daily, meterDaily, facilityDaily] = await Promise.all([
     EnergyReading.aggregate([
       { $match: match },
       { $group: {
@@ -53,6 +54,11 @@ export const getEnergyIntelligence = asyncHandler(async (request, response) => {
       } },
       { $sort: { meterId: 1, date: 1 } },
     ]),
+    EnergyReading.aggregate([
+      { $match: match },
+      { $group: { _id: { facilityId: '$facility', date: { $dateToString: { format: '%Y-%m-%d', date: '$recordedAt', timezone: 'UTC' } } }, energyKwh: { $sum: '$energyKwh' } } },
+      { $sort: { '_id.facilityId': 1, '_id.date': 1 } },
+    ]),
   ])
 
   const detected = detectConsumptionAnomalies(meterDaily)
@@ -75,6 +81,11 @@ export const getEnergyIntelligence = asyncHandler(async (request, response) => {
       generatedAt: now.toISOString(),
       history: daily.map((item) => ({ date: item._id, energyKwh: Number(Number(item.energyKwh).toFixed(3)), readingCount: item.readingCount })),
       forecast: buildEnergyForecast(daily, horizonDays, now),
+      backtest: evaluateEnergyForecast(daily, backtestDays),
+      facilityBacktests: [...new Set(facilityDaily.map((item) => String(item._id.facilityId)))].map((facilityId) => ({
+        facilityId,
+        ...evaluateEnergyForecast(facilityDaily.filter((item) => String(item._id.facilityId) === facilityId).map((item) => ({ _id: item._id.date, energyKwh: item.energyKwh })), backtestDays),
+      })),
       anomalies,
       anomalySummary: {
         count: anomalies.length,
@@ -86,6 +97,7 @@ export const getEnergyIntelligence = asyncHandler(async (request, response) => {
         excluded: 'flagged',
         historyDays,
         horizonDays,
+        backtestDays,
       },
     },
   })
