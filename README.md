@@ -4,7 +4,7 @@
 
 GridPulse is a MEVN-based platform for multi-site energy monitoring, demand forecasting, energy optimization, renewable asset visibility, and demand-response workflows.
 
-> **Project status:** Implemented foundations include Express/Mongoose configuration, authentication with rotating refresh sessions, organization membership and role checks, facility and meter management, tenant-scoped energy-reading ingestion/query APIs, and a tenant-scoped energy overview analytics endpoint. The frontend now includes registration/login, refresh-cookie session restoration, organization selection, logout, and tenant-scoped live analytics loading. Empty telemetry states are shown explicitly; no synthetic production metrics are presented. Explainable forecasting, anomaly detection, rolling-origin model evaluation, an advisory tariff-aware optimization simulator, an initial solar/demand-response scenario engine, and tenant-scoped enterprise energy reporting with CSV and print-to-PDF exports are implemented; persistent renewable asset configuration, settlement-grade demand response, and production hardening remain planned.
+> **Project status:** Implemented foundations include Express/Mongoose configuration, authentication with rotating refresh sessions, organization membership and role checks, facility and meter management, tenant-scoped energy-reading ingestion/query APIs, and a tenant-scoped energy overview analytics endpoint. The frontend now includes registration/login, refresh-cookie session restoration, organization selection, logout, and tenant-scoped live analytics loading. Empty telemetry states are shown explicitly; no synthetic production metrics are presented. Explainable forecasting, anomaly detection, rolling-origin model evaluation, an advisory tariff-aware optimization simulator, an initial solar/demand-response scenario engine, tenant-scoped enterprise energy reporting, and facility-specific tariff and bill-estimation workflows are implemented; utility integrations, invoice settlement, and production hardening remain planned.
 
 ## Product goals
 
@@ -90,6 +90,7 @@ All endpoints are prefixed with `/api/v1`.
 | POST | `/organizations/:organizationId/optimization/simulate` | Organization member | Simulate tariff-aware load shifting and battery dispatch against observed hourly energy data |
 | POST | `/organizations/:organizationId/grid-flexibility/simulate` | Organization member | Estimate solar self-consumption, surplus generation, demand-response impact and avoided emissions |
 | GET | `/organizations/:organizationId/reports/energy` | Organization member | Generate a bounded-period energy, facility, meter, data-quality and indicative emissions report |
+| GET/POST | `/organizations/:organizationId/billing/tariffs` | Organization member / owner-admin-operator | List and version facility-specific time-of-use tariff plans |\n| GET/POST | `/organizations/:organizationId/billing/bills` | Organization member / owner-admin-operator-analyst | List saved estimates and generate a tenant-scoped energy bill estimate |\n| GET | `/organizations/:organizationId/billing/bills/:billId` | Organization member | Retrieve a saved estimate snapshot |
 
 ### Facility example
 
@@ -195,6 +196,28 @@ The API returns assumptions, data coverage, hourly load/generation, estimated se
 
 The report is intended for operational management and internal review. It does not calculate energy cost because no persisted, facility-specific tariff/billing ledger is implemented. It does not establish GHG Protocol boundary completeness, market-based emissions, Scope 2 contractual instruments, assurance, or regulatory compliance. UTC is used for daily aggregation and report date boundaries.
 
+
+### Enterprise billing and energy cost intelligence
+
+The authenticated **Tariffs & Billing** workspace supports facility-specific tariff configuration and reproducible operational bill estimates.
+
+- **Tariff versioning:** configure currency, a default per-kWh rate, up to twelve time-of-use rate bands, applicable local hours and weekdays, effective dates, fixed service charge, measured-demand charge per kW, and a configurable tax/surcharge percentage. Active tariff effective periods for the same facility cannot overlap. Create a new version rather than silently changing a tariff used by prior estimates.
+- **Time-of-use billing:** eligible readings are grouped by the facility's IANA timezone and local hour/day. Configured rate bands are applied to matching intervals; unmatched intervals use the default rate.
+- **Demand and fixed charges:** demand charges use the maximum measured kW in the selected billing period. When demand telemetry is absent, no demand charge is invented and the estimate explains the omission. Fixed charge is applied once per billing period.
+- **Data quality and meter selection:** valid and estimated readings are included; flagged readings are excluded. Active main meters are preferred. Active submeters are used only when no eligible main-meter data exists for the period. The estimate reports its source, observed hours/days, reading count, and estimated-reading count.
+- **Period comparison:** the immediately preceding equal-length period is recalculated using the same selected tariff version. This is a like-for-like modeled comparison, not a copy of an earlier utility invoice.
+- **Cost optimization:** the engine surfaces an illustrative 10% load-shifting opportunity based on observed energy in higher-priced intervals and the lowest configured tariff rate. It is not a guaranteed saving or dispatch instruction.
+- **Saved estimates:** bill calculation snapshots preserve the tariff inputs, charge components, daily details, coverage, comparison and calculation version. Re-generating the same facility/tariff/period refreshes that estimate snapshot.
+- **Export:** each saved estimate can be exported as a CSV containing charge breakdown, daily energy, comparison and data coverage.
+
+Endpoints:
+- `GET/POST /organizations/:organizationId/billing/tariffs`
+- `POST /organizations/:organizationId/billing/bills/estimate`
+- `GET /organizations/:organizationId/billing/bills`
+- `GET /organizations/:organizationId/billing/bills/:billId`
+
+The calculator is an operational planning estimate, not a utility-issued invoice, tax invoice, payment collection system, settlement statement, or statutory accounting ledger. It does not yet model utility-specific slab tiers, power-factor penalties, contracted-demand ratchets, time-of-use holidays, meter multipliers, export credits, arrears, late fees, or jurisdiction-specific tax rules. Rates and tax percentages must be entered by an authorized organization user and verified against the applicable utility contract.
+
 ### Tenant and role controls
 
 Every facility, meter, and reading query is scoped to the organization resolved from the authenticated user's active membership. A meter can only be registered against a facility in that same organization. The organization ID in the URL is a lookup context, never proof of access.
@@ -219,8 +242,9 @@ Roles available: `owner`, `admin`, `operator`, `analyst`, and `viewer`. All memb
 5. Explainable baseline forecasting, anomaly detection, rolling-origin backtesting, and authenticated intelligence dashboard — initial implementation complete; advanced model evaluation and monitoring remain.
 6. Tariff-aware optimization scenario API and battery dispatch simulation — initial implementation complete; tariff persistence and billing-grade validation remain.
 7. Renewable energy and demand-response advisory simulation — initial implementation complete; metered exports, settlement, and production integration remain.
-8. Enterprise energy reporting with CSV and print-to-PDF exports — initial implementation complete; persisted tariff cost accounting, formal emissions inventory, audit controls, and compliance workflows remain.
-9. Production hardening, observability, and integration testing.
+8. Enterprise energy reporting with CSV and print-to-PDF exports — initial implementation complete; formal emissions inventory, audit controls, and compliance workflows remain.
+9. Facility-specific tariff versioning, time-of-use cost calculation, demand charges, saved bill estimates, period comparisons, and CSV exports — initial implementation complete; utility integrations, invoice settlement, and jurisdiction-specific tariff rules remain.
+10. Production hardening, observability, and integration testing.
 
 ## Security
 
