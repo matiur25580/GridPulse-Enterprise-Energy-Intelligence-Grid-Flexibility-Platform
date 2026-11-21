@@ -52,3 +52,10 @@ test('does not use energy charged later to serve an earlier peak', () => {
   })
   assert.ok(result.optimized.batteryDischargeKwh <= 2)
 })
+
+test('does not schedule charging or discharging in hours without telemetry', () => {
+  const result = simulateEnergyOptimization([{ hour: 18, energyKwh: 10, demandKw: 10 }], input)
+  assert.equal(result.schedule.find((item) => item.hourUtc === 0).observed, false)
+  assert.equal(result.schedule.find((item) => item.hourUtc === 0).chargeKwh, 0)
+  assert.equal(result.schedule.find((item) => item.hourUtc === 18).observed, true)
+})
