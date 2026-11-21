@@ -19,7 +19,7 @@ test('anomaly detector flags a spike after sufficient per-meter history', () => 
     meterId: 'meter-1',
     facilityId: 'facility-1',
     date: new Date(Date.UTC(2026, 0, index + 1)).toISOString().slice(0, 10),
-    energyKwh: index === 9 ? 220 : 100,
+    energyKwh: index === 9 ? 350 : 100,
   }))
   const result = detectConsumptionAnomalies(rows)
   assert.equal(result.length, 1)
