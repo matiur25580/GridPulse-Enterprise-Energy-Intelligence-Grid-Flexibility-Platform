@@ -124,12 +124,13 @@ export async function createTariffPlan({ organizationId, userId, input }) {
     effectiveFrom: { $lte: effectiveTo ?? new Date('9999-12-31T23:59:59.999Z') },
     $or: [{ effectiveTo: null }, { effectiveTo: { $gte: effectiveFrom } }],
   }).select('_id effectiveFrom effectiveTo').lean()
-  for (const existing of overlaps) {
-    if (existing.effectiveTo == null && existing.effectiveFrom < effectiveFrom) {
-      await TariffPlan.updateOne({ _id: existing._id, organization: organizationId, effectiveTo: null }, { $set: { effectiveTo: new Date(effectiveFrom.getTime() - 1) } })
-    } else {
-      throw new AppError('Tariff effective dates overlap an existing active plan. Choose a later start date or correct the existing tariff version.', 409, 'TARIFF_PERIOD_OVERLAP')
-    }
+  const cannotClose = overlaps.find((existing) => existing.effectiveTo != null || existing.effectiveFrom >= effectiveFrom)
+  if (cannotClose) throw new AppError('Tariff effective dates overlap an existing active plan. Choose a later start date or correct the existing tariff version.', 409, 'TARIFF_PERIOD_OVERLAP')
+  if (overlaps.length) {
+    await TariffPlan.updateMany(
+      { _id: { $in: overlaps.map((item) => item._id) }, organization: organizationId, effectiveTo: null },
+      { $set: { effectiveTo: new Date(effectiveFrom.getTime() - 1) } },
+    )
   }
   const tariff = await TariffPlan.create({
     organization: organizationId, facility: facility._id, name: input.name,
