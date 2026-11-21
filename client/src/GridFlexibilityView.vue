@@ -103,7 +103,7 @@ watch(() => props.organizationId, () => { result.value = null; error.value = '' 
             </div>
             <div class="flexibility-legend"><span><i></i> Facility load</span><span><i></i> Solar generation</span></div>
           </div>
-          <div class="flexibility-coverage"><b>{{result.dataCoverage.observedDays}} observed days</b><span>{{result.dataCoverage.hoursWithLoad}} load hours · {{result.dataCoverage.hoursWithSolar}} solar hours · {{result.dataCoverage.loadSource}} load source</span></div>
+          <div class="flexibility-coverage"><b>{{result.dataCoverage.observedDays}} observed days</b><span>{{result.dataCoverage.hoursWithLoad}} load hours ({{result.dataCoverage.observedLoadDays}} days) · {{result.dataCoverage.hoursWithSolar}} solar hours ({{result.dataCoverage.observedSolarDays}} days) · {{result.dataCoverage.loadSource}} load source</span></div>
           <p class="flexibility-assumptions"><b>MODEL ASSUMPTIONS</b><span v-for="(value,key) in result.assumptions" :key="key">{{value}}</span></p>
         </template>
       </article>
