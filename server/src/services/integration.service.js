@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto'
 import { Meter } from '../models/meter.model.js'
 import { MeterImportBatch } from '../models/meter-import-batch.model.js'
 import { UtilityInvoice } from '../models/utility-invoice.model.js'
@@ -14,17 +15,19 @@ export async function importMeterCsv({ organizationId, userId, meterId, input })
   const meter = await Meter.findOne({ _id: meterId, organization: organizationId, status: 'active' }).select('_id facility').lean()
   if (!meter) throw new AppError('Active meter not found in this organization.', 404, 'METER_NOT_FOUND')
   const readings = parseMeterReadingsCsv(input.csv)
+  const payloadHash = createHash('sha256').update(input.csv, 'utf8').digest('hex')
   let batch
   try {
     batch = await MeterImportBatch.create({
       organization: organizationId, facility: meter.facility, meter: meter._id,
-      externalBatchId: input.externalBatchId, fileName: input.fileName,
+      externalBatchId: input.externalBatchId, fileName: input.fileName, payloadHash,
       received: readings.length, createdBy: userId,
     })
   } catch (error) {
     if (error.code !== 11000) throw error
     batch = await MeterImportBatch.findOne({ organization: organizationId, meter: meter._id, externalBatchId: input.externalBatchId })
     if (!batch) throw error
+    if (batch.payloadHash !== payloadHash) throw new AppError('This batch ID was already used with different CSV content. Use a new batch ID.', 409, 'IMPORT_BATCH_PAYLOAD_MISMATCH')
     if (batch.status === 'completed') return { batch, replayed: true }
     if (batch.status === 'processing') throw new AppError('This import batch is already processing.', 409, 'IMPORT_BATCH_IN_PROGRESS')
     batch.status = 'processing'; batch.received = readings.length; batch.inserted = 0
