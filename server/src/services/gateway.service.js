@@ -5,18 +5,13 @@ import { EnergyReading } from '../models/energy-reading.model.js'
 import { env } from '../config/env.js'
 import { AppError } from '../utils/app-error.js'
 import { encryptGatewaySecret } from '../utils/gateway-security.js'
+import { gatewayHealth } from '../utils/gateway-health.js'
 
 const publicSource = (source, now = new Date()) => {
   const value = source.toObject ? source.toObject() : source
   delete value.secretCiphertext; delete value.secretIv; delete value.secretTag
   value.meterMappings = (value.meterMappings ?? []).map((mapping) => ({ ...mapping, meter: mapping.meter?.name ? mapping.meter : mapping.meter?.toString() }))
-  const threshold = value.expectedIntervalMinutes * 3 * 60 * 1000
-  const age = value.lastSuccessAt ? now.getTime() - new Date(value.lastSuccessAt).getTime() : null
-  return {
-    ...value,
-    health: value.status === 'disabled' ? 'disabled' : age == null ? 'awaiting_data' : age > threshold ? 'stale' : 'healthy',
-    minutesSinceLastSuccess: age == null ? null : Math.max(0, Math.floor(age / 60000)),
-  }
+  return { ...value, ...gatewayHealth(value, now) }
 }
 
 function encryptedSecret(secret) {
