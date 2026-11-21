@@ -62,7 +62,9 @@ npm run dev
 
 Set `MONGODB_URI` to your Atlas or local replica-set connection string. Replace the sample JWT secret with a randomly generated value of at least 32 characters before deployment.
 
-The Vue application runs at http://localhost:5173 and the API runs at http://localhost:4000.\n\nRun the available checks with `npm test --workspace server` and build the frontend with `npm run build`.
+The Vue application runs at http://localhost:5173 and the API runs at http://localhost:4000.
+
+Run the available checks with `npm test --workspace server` and build the frontend with `npm run build`.
 
 ## API
 
