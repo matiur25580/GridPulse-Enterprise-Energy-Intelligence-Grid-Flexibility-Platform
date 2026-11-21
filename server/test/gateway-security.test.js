@@ -25,6 +25,6 @@ test('signatures are bound to timestamp and exact raw body', () => {
 
 test('gateway replay nonce schema enforces unique signatures per source and TTL expiry', () => {
   const indexes = GatewayRequestNonce.schema.indexes()
-  assert.ok(indexes.some(([keys, options]) => keys.source === 1 && keys.signature === 1 && options.unique === true))
+  assert.ok(indexes.some(([keys, options]) => keys.source === 1 && keys.signatureDigest === 1 && options.unique === true))
   assert.ok(indexes.some(([keys, options]) => keys.expiresAt === 1 && options.expireAfterSeconds === 0))
 })
