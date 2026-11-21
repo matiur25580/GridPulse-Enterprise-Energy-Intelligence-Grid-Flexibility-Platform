@@ -9,7 +9,7 @@ export function calculateInvoiceReconciliation({
   const energyVarianceKwh = roundInvoiceValue(actualEnergyKwh - estimatedEnergyKwh)
   const energyVariancePercent = estimatedEnergyKwh > 0 ? roundInvoiceValue(energyVarianceKwh / estimatedEnergyKwh * 100) : null
   const demandVarianceKw = actualDemandKw == null || estimatedDemandKw == null ? null : roundInvoiceValue(actualDemandKw - estimatedDemandKw)
-  const withinTolerance = amountVariancePercent != null && Math.abs(amountVariancePercent) <= tolerancePercent
+  const withinTolerance = estimatedAmount === 0 ? actualAmount === 0 : amountVariancePercent != null && Math.abs(amountVariancePercent) <= tolerancePercent
   return {
     status: withinTolerance ? 'within_tolerance' : 'discrepancy',
     tolerancePercent,
