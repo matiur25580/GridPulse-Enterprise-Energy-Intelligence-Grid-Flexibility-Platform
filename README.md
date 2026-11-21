@@ -255,7 +255,7 @@ Example request body for the CSV endpoint:
 {
   "externalBatchId": "gateway-01-batch-2026-11-01",
   "fileName": "plant-meter-readings.csv",
-  "csv": "externalId,recordedAt,energyKwh\\ngateway-01:reading-0001,2026-11-01T10:00:00Z,124.75"
+  "csv": "externalId,recordedAt,energyKwh\ngateway-01:reading-0001,2026-11-01T10:00:00Z,124.75"
 }
 ```
 
