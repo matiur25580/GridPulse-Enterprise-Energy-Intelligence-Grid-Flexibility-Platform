@@ -9,6 +9,7 @@ import { encryptGatewaySecret } from '../utils/gateway-security.js'
 const publicSource = (source, now = new Date()) => {
   const value = source.toObject ? source.toObject() : source
   delete value.secretCiphertext; delete value.secretIv; delete value.secretTag
+  value.meterMappings = (value.meterMappings ?? []).map((mapping) => ({ ...mapping, meter: mapping.meter?.name ? mapping.meter : mapping.meter?.toString() }))
   const threshold = value.expectedIntervalMinutes * 3 * 60 * 1000
   const age = value.lastSuccessAt ? now.getTime() - new Date(value.lastSuccessAt).getTime() : null
   return {
