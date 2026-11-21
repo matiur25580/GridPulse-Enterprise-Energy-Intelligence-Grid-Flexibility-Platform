@@ -12,7 +12,7 @@ test('requires a positive energy threshold for high-consumption rules', () => {
 
 test('validates rule intervals, target IDs and severities', () => {
   assert.equal(createAlertRuleSchema.safeParse({ name: 'Meter silence', type: 'meter_silent', targetId: id, targetType: 'meter', staleAfterMinutes: 30, severity: 'high' }).success, true)
-  assert.equal(createAlertRuleSchema.safeParse({ name: 'Meter silence', type: 'meter_silent', targetId: 'invalid' }).success, false)
+  assert.equal(createAlertRuleSchema.safeParse({ name: 'Meter silence', type: 'meter_silent', targetId: 'invalid', targetType: 'meter' }).success, false)
   assert.equal(createAlertRuleSchema.safeParse({ name: 'Meter silence', type: 'meter_silent', targetId: id, targetType: 'meter', staleAfterMinutes: 2 }).success, false)
 })
 
