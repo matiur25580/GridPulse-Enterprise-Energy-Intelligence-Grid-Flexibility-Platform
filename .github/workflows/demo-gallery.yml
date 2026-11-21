@@ -1,0 +1,90 @@
+name: GridPulse demo gallery
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'server/scripts/seed-demo.js'
+      - 'scripts/capture-demo-gallery.mjs'
+      - 'docs/demo-environment.md'
+      - 'client/src/**'
+      - 'server/src/**'
+      - 'package.json'
+      - 'server/package.json'
+      - '.github/workflows/demo-gallery.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gridpulse-demo-gallery-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  capture-dashboard:
+    name: Seed demo tenant and capture dashboard
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      mongodb:
+        image: mongo:7.0
+        ports:
+          - 27017:27017
+        options: >-
+          --health-cmd "mongosh --eval 'db.adminCommand({ ping: 1 })' --quiet"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      NODE_ENV: test
+      MONGODB_URI: mongodb://127.0.0.1:27017/gridpulse-demo
+      JWT_ACCESS_SECRET: gridpulse-demo-gallery-ci-secret-2026-change-before-use
+      CLIENT_ORIGIN: http://127.0.0.1:5173
+      API_HOST: 127.0.0.1
+      API_PORT: 4000
+      ALERT_EVALUATION_INTERVAL_SECONDS: 0
+      ALERT_NOTIFICATION_INTERVAL_SECONDS: 0
+      DEMO_SEED_EMAIL: demo@gridpulse.local
+      DEMO_SEED_PASSWORD: GridPulseDemo-2026-CI-Only
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v5
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install workspace dependencies
+        run: npm install --no-audit --no-fund
+      - name: Install Playwright and Chromium
+        run: |
+          npm install --no-save --no-audit --no-fund playwright
+          npx playwright install --with-deps chromium
+      - name: Seed synthetic demonstration portfolio
+        run: npm run seed:demo
+      - name: Start API and Vue development server
+        run: |
+          npm run dev:server > /tmp/gridpulse-api.log 2>&1 &
+          npm run dev:client -- --host 127.0.0.1 > /tmp/gridpulse-client.log 2>&1 &
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://127.0.0.1:4000/api/v1/health >/dev/null && curl --fail --silent http://127.0.0.1:5173 >/dev/null; then
+              echo "GridPulse API and client are ready."
+              exit 0
+            fi
+            sleep 2
+          done
+          echo "GridPulse did not become ready."
+          cat /tmp/gridpulse-api.log
+          cat /tmp/gridpulse-client.log
+          exit 1
+      - name: Capture twelve authenticated dashboard screenshots
+        run: node scripts/capture-demo-gallery.mjs
+      - name: Upload browser screenshot artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: gridpulse-dashboard-screenshots
+          path: artifacts/gridpulse-dashboard-screenshots/*.png
+          if-no-files-found: error
+          retention-days: 14
