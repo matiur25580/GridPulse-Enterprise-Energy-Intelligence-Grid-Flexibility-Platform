@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { buildEnergyForecast, detectConsumptionAnomalies } from '../src/services/energy-intelligence.service.js'
+import { buildEnergyForecast, detectConsumptionAnomalies, evaluateEnergyForecast } from '../src/services/energy-intelligence.service.js'
 
 test('forecast uses a seven-day baseline and returns bounded non-negative values', () => {
   const daily = Array.from({ length: 14 }, (_item, index) => ({
@@ -44,4 +44,35 @@ test('anomaly detector evaluates each meter independently', () => {
   const result = detectConsumptionAnomalies(rows)
   assert.equal(result.length, 1)
   assert.equal(result[0].meterId, 'meter-b')
+})
+
+test('forecast backtest uses only prior contiguous observations and reports standard metrics', () => {
+  const daily = Array.from({ length: 20 }, (_item, index) => ({
+    _id: new Date(Date.UTC(2026, 0, index + 1)).toISOString().slice(0, 10),
+    energyKwh: 100 + index,
+  }))
+  const result = evaluateEnergyForecast(daily, 7)
+  assert.equal(result.evaluatedDays, 7)
+  assert.ok(result.metrics.maeKwh >= 0)
+  assert.ok(result.metrics.rmseKwh >= result.metrics.maeKwh)
+  assert.ok(result.metrics.mapePercent >= 0)
+  assert.equal(result.predictions[0].date, '2026-01-14')
+  assert.equal(result.method, 'rolling-origin-one-day-ahead')
+})
+
+test('forecast backtest skips calendar gaps and does not bridge discontinuous training data', () => {
+  const daily = Array.from({ length: 12 }, (_item, index) => ({
+    _id: new Date(Date.UTC(2026, 0, index < 8 ? index + 1 : index + 2)).toISOString().slice(0, 10),
+    energyKwh: 100 + index,
+  }))
+  const result = evaluateEnergyForecast(daily, 14)
+  assert.equal(result.evaluatedDays, 1)
+  assert.equal(result.predictions.some((item) => item.date === '2026-01-10'), false)
+})
+
+test('forecast backtest returns null metrics when there is insufficient history', () => {
+  const result = evaluateEnergyForecast([{ _id: '2026-01-01', energyKwh: 50 }], 7)
+  assert.equal(result.evaluatedDays, 0)
+  assert.equal(result.metrics.maeKwh, null)
+  assert.equal(result.metrics.mapePercent, null)
 })
