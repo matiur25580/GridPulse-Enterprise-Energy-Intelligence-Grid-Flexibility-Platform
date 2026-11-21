@@ -4,7 +4,7 @@
 
 GridPulse is a MEVN-based platform for multi-site energy monitoring, demand forecasting, energy optimization, renewable asset visibility, and demand-response workflows.
 
-> **Project status:** Implemented foundations include Express/Mongoose configuration, authentication with rotating refresh sessions, organization membership and role checks, facility and meter management, and tenant-scoped energy-reading ingestion/query APIs. Forecasting, optimization, renewable asset operations, and grid workflows remain planned modules.
+> **Project status:** Implemented foundations include Express/Mongoose configuration, authentication with rotating refresh sessions, organization membership and role checks, facility and meter management, tenant-scoped energy-reading ingestion/query APIs, and a tenant-scoped energy overview analytics endpoint. The frontend currently presents an explicitly labelled illustrative dashboard preview; authenticated live-data UI integration remains future work. Forecasting, optimization, renewable asset operations, and grid workflows remain planned modules.
 
 ## Product goals
 
@@ -151,7 +151,7 @@ Roles available: `owner`, `admin`, `operator`, `analyst`, and `viewer`. All memb
 1. Foundation and API conventions — implemented.
 2. Authentication, organizations, memberships, tenant-aware authorization — initial implementation complete; integration hardening remains.
 3. Facilities, meters, and energy-reading ingestion — initial APIs and models implemented; database-backed integration tests remain.
-4. Time-series dashboards and real-time updates.
+4. Portfolio analytics endpoint and responsive dashboard preview — initial implementation complete; authenticated live-data UI wiring and integration tests remain.
 5. Forecasting, anomaly detection, and model evaluation.
 6. Optimization scenarios and demand-response simulation.
 7. Renewable assets, billing, reporting, audit, and operational hardening.
