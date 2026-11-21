@@ -14,24 +14,34 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
-  verify:
-    name: Backend tests and frontend production build
+  backend-tests:
+    name: Backend unit tests
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - name: Check out source
         uses: actions/checkout@v4
-
       - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
-
       - name: Install workspace dependencies
         run: npm install --no-audit --no-fund
-
       - name: Run backend tests
         run: npm test
 
+  frontend-build:
+    name: Frontend type-check and production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - name: Check out source
+        uses: actions/checkout@v4
+      - name: Set up Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Install workspace dependencies
+        run: npm install --no-audit --no-fund
       - name: Build Vue application
         run: npm run build
