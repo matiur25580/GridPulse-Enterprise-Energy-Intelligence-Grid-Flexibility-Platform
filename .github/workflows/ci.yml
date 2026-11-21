@@ -6,20 +6,32 @@ on:
   pull_request:
     branches: [main]
 
+permissions:
+  contents: read
+
+concurrency:
+  group: gridpulse-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   verify:
+    name: Backend tests and frontend production build
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
-      - name: Checkout
+      - name: Check out source
         uses: actions/checkout@v4
-      - name: Set up Node.js
+
+      - name: Set up Node.js 22
         uses: actions/setup-node@v4
         with:
           node-version: 22
+
       - name: Install workspace dependencies
         run: npm install --no-audit --no-fund
+
       - name: Run backend tests
-        run: npm test --workspace server
-      - name: Build frontend
-        run: npm run build --workspace client
+        run: npm test
+
+      - name: Build Vue application
+        run: npm run build
