@@ -8,6 +8,7 @@ const schema = z.object({
   CLIENT_ORIGIN: z.string().url().default('http://localhost:5173'),
   MONGODB_URI: z.string().min(1, 'MONGODB_URI is required'),
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must contain at least 32 characters'),
+  INTEGRATION_ENCRYPTION_KEY: z.string().min(32, 'INTEGRATION_ENCRYPTION_KEY must contain at least 32 characters').optional(),
   ACCESS_TOKEN_TTL: z.string().default('15m'),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().max(90).default(30),
   COOKIE_SECURE: z.string().default('false'),
