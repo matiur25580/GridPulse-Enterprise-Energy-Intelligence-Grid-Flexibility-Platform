@@ -4,7 +4,7 @@
 
 GridPulse is a MEVN-based platform for multi-site energy monitoring, demand forecasting, energy optimization, renewable asset visibility, and demand-response workflows.
 
-> **Project status:** Implemented foundations include Express/Mongoose configuration, authentication with rotating refresh sessions, organization membership and role checks, facility and meter management, tenant-scoped energy-reading ingestion/query APIs, and a tenant-scoped energy overview analytics endpoint. The frontend now includes registration/login, refresh-cookie session restoration, organization selection, logout, and tenant-scoped live analytics loading. Empty telemetry states are shown explicitly; no synthetic production metrics are presented. Explainable forecasting, anomaly detection, rolling-origin model evaluation, an advisory tariff-aware optimization simulator, and an initial solar/demand-response scenario engine are implemented; persistent renewable asset configuration, settlement-grade demand response, and production hardening remain planned.
+> **Project status:** Implemented foundations include Express/Mongoose configuration, authentication with rotating refresh sessions, organization membership and role checks, facility and meter management, tenant-scoped energy-reading ingestion/query APIs, and a tenant-scoped energy overview analytics endpoint. The frontend now includes registration/login, refresh-cookie session restoration, organization selection, logout, and tenant-scoped live analytics loading. Empty telemetry states are shown explicitly; no synthetic production metrics are presented. Explainable forecasting, anomaly detection, rolling-origin model evaluation, an advisory tariff-aware optimization simulator, an initial solar/demand-response scenario engine, and tenant-scoped enterprise energy reporting with CSV and print-to-PDF exports are implemented; persistent renewable asset configuration, settlement-grade demand response, and production hardening remain planned.
 
 ## Product goals
 
@@ -178,6 +178,19 @@ The simulator averages observed daily energy by UTC hour, shifts battery chargin
 - **Data quality:** valid and estimated readings are included; flagged readings are excluded. Hourly profiles are averaged across observed UTC days. Missing hours remain missing/zero in the schedule and are identified in coverage fields.
 
 The API returns assumptions, data coverage, hourly load/generation, estimated self-consumption/export, demand-response impact and emissions. No commands are sent to meters, inverters, batteries, or grid equipment. Financial incentives exclude program qualification, settlement rules, demand baselines, penalties, taxes and fees.
+
+
+### Enterprise energy reporting
+
+`GET /organizations/:organizationId/reports/energy?from=2026-01-01T00:00:00Z&to=2026-01-31T23:59:59Z&gridEmissionFactorKgPerKwh=0.4` returns a tenant-scoped report for a period of up to 366 days. The authenticated reporting workspace lets organization members select a period and emissions factor, review KPIs and daily/facility/meter detail, export CSV, or use the browser print dialog to save a PDF.
+
+- **Portfolio performance:** total and average daily energy, maximum measured demand, average power factor, and included reading count.
+- **Facility and meter detail:** consumption, demand and reading counts by facility; meter-level energy grouped by reading quality.
+- **Data quality:** valid and estimated readings are included in energy, demand and emissions calculations. Flagged readings are reported separately and excluded from those totals.
+- **Indicative emissions:** included electricity consumption multiplied by the user-supplied grid emissions factor. The factor defaults to 0.4 kg CO2e/kWh and is configurable from 0 to 5. It is not a verified inventory or regulatory factor selection.
+- **Exports:** CSV contains summary, daily, facility, meter and quality sections. Print/PDF creates a formatted report through the browser's print dialog.
+
+The report is intended for operational management and internal review. It does not calculate energy cost because no persisted, facility-specific tariff/billing ledger is implemented. It does not establish GHG Protocol boundary completeness, market-based emissions, Scope 2 contractual instruments, assurance, or regulatory compliance. UTC is used for daily aggregation and report date boundaries.
 
 ### Tenant and role controls
 
