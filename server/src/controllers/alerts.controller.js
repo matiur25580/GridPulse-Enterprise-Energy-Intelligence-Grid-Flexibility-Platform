@@ -28,7 +28,7 @@ export const evaluateAlerts = asyncHandler(async (request, response) => {
     response.json({ data: summary })
   } catch (error) {
     const finishedAt = new Date()
-    await AlertEvaluationRun.updateOne({ _id: run._id }, { $set: { status: 'failed', finishedAt, durationMs: finishedAt - startedAt, errorCode: typeof error.code === 'string' ? error.code.slice(0, 80) : 'EVALUATION_FAILED', errorMessage: String(error.message || 'Alert evaluation failed').slice(0, 500) } })
+    await AlertEvaluationRun.updateOne({ _id: run._id }, { $set: { status: 'failed', finishedAt, durationMs: finishedAt - startedAt, errorCode: error.name === 'AppError' && typeof error.code === 'string' ? error.code.slice(0, 80) : 'EVALUATION_FAILED', errorMessage: 'Alert evaluation failed. Review protected server logs for details.' } })
     throw error
   }
 })
