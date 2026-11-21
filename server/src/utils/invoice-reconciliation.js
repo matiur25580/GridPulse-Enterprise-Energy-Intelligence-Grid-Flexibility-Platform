@@ -27,7 +27,7 @@ export function calculateInvoiceReconciliation({
     currency,
     notes: [
       ...(amountVariance > 0 ? ['Actual utility amount is higher than the modeled estimate.'] : amountVariance < 0 ? ['Actual utility amount is lower than the modeled estimate.'] : ['Actual and modeled amounts match.']),
-      ...(estimatedDemandKw == null ? ['Demand comparison is unavailable because the estimate lacks complete measured demand coverage.'] : []),
+      ...(actualDemandKw == null || estimatedDemandKw == null ? ['Demand comparison is unavailable because actual or estimated measured demand is missing.'] : []),
       ...(amountVariancePercent == null ? ['Percentage variance is unavailable because the modeled amount is zero.'] : []),
     ],
     methodology: 'Actual invoice totals are compared with a newly generated GridPulse estimate using the selected tariff version and eligible meter telemetry for the same facility and dates. This is an exception-screening aid, not an accounting adjustment.',
