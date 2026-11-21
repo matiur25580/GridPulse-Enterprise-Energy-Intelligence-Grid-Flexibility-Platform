@@ -28,3 +28,11 @@ test('enforces compatible alert target types', () => {
   assert.equal(createAlertRuleSchema.safeParse({ name: 'Gateway silence', type: 'gateway_silent', targetId: id, targetType: 'meter' }).success, false)
   assert.equal(createAlertRuleSchema.safeParse({ name: 'Meter silence', type: 'meter_silent', targetId: id, targetType: 'facility' }).success, false)
 })
+
+test('does not accept client-controlled evaluation timestamps and bounds run history', async () => {
+  const { evaluateAlertsSchema, listEvaluationsQuerySchema } = await import('../src/schemas/alerts.schema.js')
+  assert.equal(evaluateAlertsSchema.safeParse({}).success, true)
+  assert.equal(evaluateAlertsSchema.safeParse({ now: '2026-11-21T12:00:00.000Z' }).success, false)
+  assert.deepEqual(listEvaluationsQuerySchema.parse({}), { limit: 20 })
+  assert.equal(listEvaluationsQuerySchema.safeParse({ limit: '101' }).success, false)
+})
