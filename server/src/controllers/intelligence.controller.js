@@ -1,0 +1,91 @@
+import { EnergyReading } from '../models/energy-reading.model.js'
+import { Meter } from '../models/meter.model.js'
+import { buildEnergyForecast, detectConsumptionAnomalies } from '../services/energy-intelligence.service.js'
+import { asyncHandler } from '../utils/async-handler.js'
+
+const startOfUtcDay = (date) => {
+  const value = new Date(date)
+  value.setUTCHours(0, 0, 0, 0)
+  return value
+}
+
+export const getEnergyIntelligence = asyncHandler(async (request, response) => {
+  const now = new Date()
+  const today = startOfUtcDay(now)
+  const historyDays = request.validatedQuery.historyDays
+  const horizonDays = request.validatedQuery.horizonDays
+  const from = new Date(today.getTime() - (historyDays - 1) * 86400000)
+  const organization = request.organization._id
+  const match = {
+    organization,
+    recordedAt: { $gte: from, $lt: new Date(today.getTime() + 86400000) },
+    quality: { $in: ['valid', 'estimated'] },
+  }
+
+  const [daily, meterDaily] = await Promise.all([
+    EnergyReading.aggregate([
+      { $match: match },
+      { $group: {
+        _id: { $dateToString: { format: '%Y-%m-%d', date: '$recordedAt', timezone: 'UTC' } },
+        energyKwh: { $sum: '$energyKwh' },
+        readingCount: { $sum: 1 },
+      } },
+      { $sort: { _id: 1 } },
+    ]),
+    EnergyReading.aggregate([
+      { $match: match },
+      { $group: {
+        _id: {
+          meterId: '$meter',
+          facilityId: '$facility',
+          date: { $dateToString: { format: '%Y-%m-%d', date: '$recordedAt', timezone: 'UTC' } },
+        },
+        energyKwh: { $sum: '$energyKwh' },
+        readingCount: { $sum: 1 },
+      } },
+      { $project: {
+        _id: 0,
+        meterId: '$_id.meterId',
+        facilityId: '$_id.facilityId',
+        date: '$_id.date',
+        energyKwh: 1,
+        readingCount: 1,
+      } },
+      { $sort: { meterId: 1, date: 1 } },
+    ]),
+  ])
+
+  const detected = detectConsumptionAnomalies(meterDaily)
+  const meterIds = [...new Set(detected.map((item) => String(item.meterId)))]
+  const meters = meterIds.length
+    ? await Meter.find({ _id: { $in: meterIds }, organization }).select('name serialNumber facility').lean()
+    : []
+  const meterLookup = new Map(meters.map((meter) => [String(meter._id), meter]))
+  const anomalies = detected.map((item) => {
+    const meter = meterLookup.get(String(item.meterId))
+    return {
+      ...item,
+      meter: meter ? { id: meter._id, name: meter.name, serialNumber: meter.serialNumber } : null,
+    }
+  })
+
+  response.json({
+    data: {
+      range: { from: from.toISOString(), to: now.toISOString() },
+      generatedAt: now.toISOString(),
+      forecast: buildEnergyForecast(daily, horizonDays, now),
+      anomalies,
+      anomalySummary: {
+        count: anomalies.length,
+        high: anomalies.filter((item) => item.severity === 'high').length,
+        medium: anomalies.filter((item) => item.severity === 'medium').length,
+      },
+      dataQuality: {
+        included: 'valid, estimated',
+        excluded: 'flagged',
+        historyDays,
+        horizonDays,
+      },
+    },
+  })
+})
