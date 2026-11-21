@@ -9,8 +9,6 @@ import { parseMeterReadingsCsv } from '../utils/meter-csv.js'
 import { AppError } from '../utils/app-error.js'
 import { calculateInvoiceReconciliation } from '../utils/invoice-reconciliation.js'
 
-const round = (value, digits = 2) => Number(value.toFixed(digits))
-
 export async function importMeterCsv({ organizationId, userId, meterId, input }) {
   const meter = await Meter.findOne({ _id: meterId, organization: organizationId, status: 'active' }).select('_id facility').lean()
   if (!meter) throw new AppError('Active meter not found in this organization.', 404, 'METER_NOT_FOUND')
