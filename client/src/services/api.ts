@@ -118,7 +118,7 @@ export interface OptimizationScenario {
   baseline: { dailyEnergyKwh: number; dailyCost: number; peakDemandKw: number }
   optimized: { dailyGridEnergyKwh: number; dailyCost: number; peakDemandKw: number; batteryChargeKwh: number; batteryDischargeKwh: number; endingStateOfChargeKwh: number }
   impact: { dailyCostSavings: number; costSavingsPercent: number | null; peakReductionKw: number; peakReductionPercent: number | null }
-  schedule: Array<{ hourUtc: number; baselineEnergyKwh: number; gridEnergyKwh: number; chargeKwh: number; dischargeKwh: number; tariffRate: number; period: 'peak' | 'off-peak' }>
+  schedule: Array<{ hourUtc: number; observed: boolean; baselineEnergyKwh: number; gridEnergyKwh: number; chargeKwh: number; dischargeKwh: number; tariffRate: number; period: 'peak' | 'off-peak' }>
 }
 export const optimizationApi = {
   simulate: (organizationId: string, input: OptimizationScenarioInput) =>
