@@ -47,7 +47,7 @@ function rateFor(tariff, hour, dayOfWeek) {
   return { rate: match?.ratePerKwh ?? tariff.defaultRatePerKwh, label: match?.label ?? 'Default rate' }
 }
 
-function calculateCosts(rows, tariff) {
+export function calculateCosts(rows, tariff) {
   const dailyMap = new Map()
   let energyKwh = 0
   let energyCharge = 0
@@ -56,11 +56,10 @@ function calculateCosts(rows, tariff) {
   let powerFactorSamples = 0
   let readingCount = 0
   let estimatedReadings = 0
-  let higherRateEnergyKwh = 0
+  let potentialShiftSavings = 0
   const configuredRates = [tariff.defaultRatePerKwh, ...tariff.energyRates.map((item) => item.ratePerKwh)]
   const lowestRate = Math.min(...configuredRates)
-  const highestRate = Math.max(...configuredRates)
-  for (const row of rows) {
+    for (const row of rows) {
     const { rate } = rateFor(tariff, row._id.hour, row._id.dayOfWeek)
     const charge = row.energyKwh * rate
     energyKwh += row.energyKwh
@@ -69,7 +68,7 @@ function calculateCosts(rows, tariff) {
     if (row.averagePowerFactor != null) { powerFactorTotal += row.averagePowerFactor; powerFactorSamples += 1 }
     readingCount += row.readingCount
     estimatedReadings += row.estimatedReadings
-    if (rate > lowestRate) higherRateEnergyKwh += row.energyKwh
+    potentialShiftSavings += row.energyKwh * 0.1 * Math.max(0, rate - lowestRate)
     const daily = dailyMap.get(row._id.date) ?? { date: row._id.date, energyKwh: 0, energyCharge: 0, demandKw: null, readingCount: 0 }
     daily.energyKwh += row.energyKwh
     daily.energyCharge += charge
@@ -82,8 +81,6 @@ function calculateCosts(rows, tariff) {
   const subtotal = energyCharge + demandCharge + fixedCharge
   const tax = subtotal * tariff.taxRatePercent / 100
   const total = subtotal + tax
-  const shiftableEnergyKwh = higherRateEnergyKwh * 0.1
-  const potentialShiftSavings = shiftableEnergyKwh * Math.max(0, highestRate - lowestRate)
   const daily = [...dailyMap.values()].map((item) => ({
     ...item,
     energyKwh: round(item.energyKwh),
