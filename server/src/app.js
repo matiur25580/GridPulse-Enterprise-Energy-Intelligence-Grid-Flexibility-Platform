@@ -10,6 +10,7 @@ import analyticsRoutes from './routes/analytics.routes.js'
 import intelligenceRoutes from './routes/intelligence.routes.js'
 import optimizationRoutes from './routes/optimization.routes.js'
 import gridFlexibilityRoutes from './routes/grid-flexibility.routes.js'
+import reportRoutes from './routes/report.routes.js'
 import { errorHandler, notFoundHandler } from './middleware/error-handler.js'
 
 export const app = express()
@@ -29,6 +30,7 @@ app.get('/api/v1/health', (_request, response) => {
 })
 
 app.use('/api/v1/auth', authRoutes)
+app.use('/api/v1/organizations', reportRoutes)
 app.use('/api/v1/organizations', gridFlexibilityRoutes)
 app.use('/api/v1/organizations', optimizationRoutes)
 app.use('/api/v1/organizations', intelligenceRoutes)
