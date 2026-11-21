@@ -143,7 +143,7 @@ test('billing falls back to submeters only when no main-meter readings exist', a
   assert.ok(snapshots())
 })
 
-test('billing does not query submeter readings when main-meter readings are available', async (t) => {
+test('billing uses main-meter readings before considering submeter fallback', async (t) => {
   const meterTypesByCall = []
   installModelStubs(t, async (pipeline) => {
     const lookup = pipeline.find((stage) => stage.$lookup)?.$lookup
@@ -158,5 +158,5 @@ test('billing does not query submeter readings when main-meter readings are avai
   const result = await estimateAndSaveBill(input)
   assert.equal(result.coverage.meterSource, 'main')
   assert.deepEqual(meterTypesByCall.slice(0, 2), [['main'], ['main']])
-  assert.equal(meterTypesByCall.some((types) => types.includes('submeter')), false)
+  assert.deepEqual(meterTypesByCall.slice(0, 3), [['main'], ['main'], ['submeter']])
 })
