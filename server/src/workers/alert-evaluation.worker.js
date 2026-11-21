@@ -7,7 +7,7 @@ import { env } from '../config/env.js'
 
 const LEASE_ID = 'gridpulse-alert-evaluation'
 let timer
-let running = false
+let activeRun = null
 
 async function acquireLease(ownerId, now = new Date()) {
   const leaseUntil = new Date(now.getTime() + env.ALERT_EVALUATION_LEASE_SECONDS * 1000)
@@ -27,7 +27,7 @@ async function acquireLease(ownerId, now = new Date()) {
 async function renewLease(ownerId) {
   const leaseUntil = new Date(Date.now() + env.ALERT_EVALUATION_LEASE_SECONDS * 1000)
   const result = await AlertEvaluationLease.updateOne({ _id: LEASE_ID, ownerId }, { $set: { leaseUntil } })
-  return result.modifiedCount === 1 || result.matchedCount === 1
+  return result.matchedCount === 1
 }
 
 async function releaseLease(ownerId) {
@@ -53,36 +53,38 @@ async function evaluateOrganization(organizationId) {
     await AlertEvaluationRun.updateOne({ _id: run._id }, {
       $set: {
         status: 'failed', finishedAt, durationMs: finishedAt - startedAt,
-        errorCode: typeof error.code === 'string' ? error.code.slice(0, 80) : 'EVALUATION_FAILED',
-        errorMessage: String(error.message || 'Alert evaluation failed').slice(0, 500),
+        errorCode: error.name === 'AppError' && typeof error.code === 'string' ? error.code.slice(0, 80) : 'EVALUATION_FAILED',
+        errorMessage: 'Alert evaluation failed. Review protected server logs for details.',
       },
     })
     console.error('GridPulse scheduled alert evaluation failed:', { organizationId: String(organizationId), error })
   }
 }
 
-export async function runScheduledAlertEvaluation() {
-  if (running) return { skipped: true, reason: 'worker_busy' }
-  running = true
+async function executeScheduledAlertEvaluation() {
   const ownerId = randomUUID()
+  const acquired = await acquireLease(ownerId)
+  if (!acquired) return { skipped: true, reason: 'lease_held' }
+  const heartbeat = setInterval(() => {
+    renewLease(ownerId).then(renewed => {
+      if (!renewed) console.error('GridPulse alert evaluation lease ownership was lost.')
+    }).catch(error => console.error('GridPulse alert lease renewal failed:', error))
+  }, Math.max(20_000, Math.floor(env.ALERT_EVALUATION_LEASE_SECONDS * 1000 / 3)))
+  heartbeat.unref?.()
   try {
-    const acquired = await acquireLease(ownerId)
-    if (!acquired) return { skipped: true, reason: 'lease_held' }
-    const heartbeat = setInterval(() => {
-      renewLease(ownerId).catch(error => console.error('GridPulse alert lease renewal failed:', error))
-    }, Math.max(20_000, Math.floor(env.ALERT_EVALUATION_LEASE_SECONDS * 1000 / 3)))
-    heartbeat.unref?.()
-    try {
-      const organizations = await AlertRule.distinct('organization', { status: 'active' })
-      for (const organizationId of organizations) await evaluateOrganization(organizationId)
-      return { skipped: false, organizations: organizations.length }
-    } finally {
-      clearInterval(heartbeat)
-      await releaseLease(ownerId)
-    }
+    const organizations = await AlertRule.distinct('organization', { status: 'active' })
+    for (const organizationId of organizations) await evaluateOrganization(organizationId)
+    return { skipped: false, organizations: organizations.length }
   } finally {
-    running = false
+    clearInterval(heartbeat)
+    await releaseLease(ownerId)
   }
+}
+
+export function runScheduledAlertEvaluation() {
+  if (activeRun) return Promise.resolve({ skipped: true, reason: 'worker_busy' })
+  activeRun = executeScheduledAlertEvaluation().finally(() => { activeRun = null })
+  return activeRun
 }
 
 export function startAlertEvaluationWorker() {
@@ -95,7 +97,8 @@ export function startAlertEvaluationWorker() {
   console.info(`GridPulse alert evaluator scheduled every ${env.ALERT_EVALUATION_INTERVAL_SECONDS} seconds`)
 }
 
-export function stopAlertEvaluationWorker() {
+export async function stopAlertEvaluationWorker() {
   if (timer) clearInterval(timer)
   timer = undefined
+  if (activeRun) await activeRun
 }
