@@ -13,13 +13,11 @@ const schema = z.object({
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().max(90).default(30),
   COOKIE_SECURE: z.string().default('false'),
 })
-
 const parsed = schema.safeParse(process.env)
 if (!parsed.success) {
   console.error('Invalid environment configuration:', parsed.error.flatten().fieldErrors)
   throw new Error('GridPulse environment configuration is invalid.')
 }
-
 export const env = {
   ...parsed.data,
   COOKIE_SECURE: parsed.data.COOKIE_SECURE === 'true' || parsed.data.NODE_ENV === 'production',
