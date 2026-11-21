@@ -6,6 +6,7 @@ import { EnergyReading } from '../models/energy-reading.model.js'
 import { estimateAndSaveBill } from './billing.service.js'
 import { parseMeterReadingsCsv } from '../utils/meter-csv.js'
 import { AppError } from '../utils/app-error.js'
+import { calculateInvoiceReconciliation } from '../utils/invoice-reconciliation.js'
 
 const round = (value, digits = 2) => Number(value.toFixed(digits))
 
@@ -69,32 +70,12 @@ export async function reconcileUtilityInvoice({ organizationId, userId, input })
     input: { facilityId: input.facilityId, tariffId: input.tariffId, from: input.from, to: input.to },
   })
   if (estimate.currency !== input.currency) throw new AppError('Invoice currency must match the selected tariff currency.', 422, 'INVOICE_CURRENCY_MISMATCH')
-  const estimatedAmount = estimate.summary.total
-  const amountVariance = round(input.actualAmount - estimatedAmount)
-  const amountVariancePercent = estimatedAmount > 0 ? round(amountVariance / estimatedAmount * 100, 2) : null
-  const energyVarianceKwh = round(input.actualEnergyKwh - estimate.summary.totalEnergyKwh)
-  const energyVariancePercent = estimate.summary.totalEnergyKwh > 0 ? round(energyVarianceKwh / estimate.summary.totalEnergyKwh * 100, 2) : null
-  const demandVarianceKw = input.actualDemandKw == null || estimate.summary.peakDemandKw == null
-    ? null : round(input.actualDemandKw - estimate.summary.peakDemandKw)
-  const withinTolerance = amountVariancePercent != null && Math.abs(amountVariancePercent) <= input.tolerancePercent
-  const reconciliation = {
-    status: withinTolerance ? 'within_tolerance' : 'discrepancy',
-    tolerancePercent: input.tolerancePercent,
-    estimatedAmount: round(estimatedAmount), actualAmount: round(input.actualAmount),
-    amountVariance, amountVariancePercent,
-    estimatedEnergyKwh: estimate.summary.totalEnergyKwh,
-    actualEnergyKwh: input.actualEnergyKwh, energyVarianceKwh, energyVariancePercent,
-    estimatedDemandKw: estimate.summary.peakDemandKw,
-    actualDemandKw: input.actualDemandKw ?? null, demandVarianceKw,
-    currency: input.currency,
-    notes: [
-      ...(amountVariance > 0 ? ['Actual utility amount is higher than the modeled estimate.'] : amountVariance < 0 ? ['Actual utility amount is lower than the modeled estimate.'] : ['Actual and modeled amounts match.']),
-      ...(estimate.summary.peakDemandKw == null ? ['Demand comparison is unavailable because the estimate lacks complete measured demand coverage.'] : []),
-      ...(amountVariancePercent == null ? ['Percentage variance is unavailable because the modeled amount is zero.'] : []),
-    ],
-    methodology: 'Actual invoice totals are compared with a newly generated GridPulse estimate using the selected tariff version and eligible meter telemetry for the same facility and dates. This is an exception-screening aid, not an accounting adjustment.',
-    reconciledAt: new Date(),
-  }
+  const reconciliation = calculateInvoiceReconciliation({
+    actualAmount: input.actualAmount, estimatedAmount: estimate.summary.total,
+    actualEnergyKwh: input.actualEnergyKwh, estimatedEnergyKwh: estimate.summary.totalEnergyKwh,
+    actualDemandKw: input.actualDemandKw ?? null, estimatedDemandKw: estimate.summary.peakDemandKw,
+    currency: input.currency, tolerancePercent: input.tolerancePercent,
+  })
   try {
     return await UtilityInvoice.create({
       organization: organizationId, facility: input.facilityId, billEstimate: estimate._id,
