@@ -40,7 +40,7 @@ async function hourlyReadings({ organizationId, facilityId, from, to, timezone }
       energyKwh: { $sum: '$energyKwh' },
       peakDemandKw: { $sum: { $ifNull: ['$peakDemandKw', 0] } },
       meterCount: { $sum: 1 },
-      demandMeterCount: { $sum: { $cond: [{ $gt: ['$demandSamples', 0] }, 1, 0] } },
+      demandMeterCount: { $sum: { $cond: [{ $eq: ['$demandSamples', '$readingCount'] }, 1, 0] } },
       averagePowerFactor: { $avg: '$averagePowerFactor' },
       readingCount: { $sum: '$readingCount' },
       estimatedReadings: { $sum: '$estimatedReadings' },
