@@ -157,7 +157,7 @@ Create and ingestion controls are shown to owner, admin, and operator members. T
 
 - **Forecast:** seven-day moving-average baseline with a linear trend fitted to up to fourteen observed daily totals. The daily trend is capped at 15% of the baseline. Lower/upper bands are heuristic uncertainty ranges, not calibrated statistical confidence intervals.
 - **Anomalies:** daily meter totals are compared with up to fourteen preceding observed days using a rolling median and median absolute deviation (MAD). At least seven prior observations are required. High/medium severity and baseline/threshold/deviation values are returned for explainability.
-- **Data quality:** valid and estimated readings are included; flagged readings are excluded. The response includes the selected history window and methodology.
+- **Data quality:** valid and estimated readings are included; flagged readings are excluded. The response includes the selected history window and methodology. A rolling-origin one-day-ahead backtest reports MAE, RMSE, MAPE, WAPE, mean error/bias, actual-versus-predicted points, and facility-level metrics. Backtesting evaluates only contiguous observed days and uses strictly prior observations for each prediction; MAPE excludes zero-actual days. A minimum of eight consecutive daily observations is required for the first score. Metrics are descriptive and should not be interpreted as guaranteed future performance.
 
 This first intelligence release is deterministic and explainable. It is not a trained machine-learning model, does not claim probabilistic forecast accuracy, and does not automatically control equipment. Anomaly candidates should be reviewed against operational context before action.
 ### Tenant and role controls
