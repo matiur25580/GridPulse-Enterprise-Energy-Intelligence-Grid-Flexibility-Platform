@@ -1,7 +1,7 @@
 import { z } from 'zod'
 
-const objectId = z.string().regex(/^[a-f\\d]{24}$/i, 'A valid identifier is required.')
-const dateOnly = z.string().regex(/^\\d{4}-\\d{2}-\\d{2}$/, 'Use YYYY-MM-DD dates.').refine((value) => { const time = Date.parse(value + 'T00:00:00.000Z'); return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === value }, 'Enter a real calendar date.')
+const objectId = z.string().regex(/^[a-f\d]{24}$/i, 'A valid identifier is required.')
+const dateOnly = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Use YYYY-MM-DD dates.').refine((value) => { const time = Date.parse(value + 'T00:00:00.000Z'); return Number.isFinite(time) && new Date(time).toISOString().slice(0, 10) === value }, 'Enter a real calendar date.')
 const hours = z.array(z.number().int().min(0).max(23)).min(1).max(24).refine((values) => new Set(values).size === values.length, 'Hours must be unique.')
 const days = z.array(z.number().int().min(0).max(6)).min(1).max(7).refine((values) => new Set(values).size === values.length, 'Days must be unique.')
 
