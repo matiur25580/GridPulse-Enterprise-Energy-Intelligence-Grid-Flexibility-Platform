@@ -14,13 +14,12 @@ const cookieOptions = {
   secure: env.COOKIE_SECURE,
   sameSite: 'strict',
   path: '/api/v1/auth',
-  maxAge: env.REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000,
+  maxAge: env.REFRESH_TOKEN_TTL_DAYS * 86400000,
 }
-
 const setRefreshCookie = (response, token) => response.cookie(cookieName, token, cookieOptions)
 const clearRefreshCookie = (response) => response.clearCookie(cookieName, { ...cookieOptions, maxAge: undefined })
-
 const publicUser = (user) => ({ id: user.id, name: user.name, email: user.email })
+const slugSuffix = (id) => id.slice(-6).toLowerCase()
 
 export const register = asyncHandler(async (request, response) => {
   const session = await mongoose.startSession()
@@ -33,11 +32,12 @@ export const register = asyncHandler(async (request, response) => {
         email: request.body.email,
         passwordHash: request.body.password,
       }], { session })
-      const slugBase = request.body.organizationName.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
-      const slug = `${slugBase}-${cryptoSlug(user.id)}`
+      const normalizedName = request.body.organizationName.toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')
+      const slugBase = normalizedName || 'organization'
       const [organization] = await Organization.create([{
         name: request.body.organizationName,
-        slug,
+        slug: `${slugBase}-${slugSuffix(user.id)}`,
         createdBy: user._id,
       }], { session })
       await Membership.create([{
@@ -60,14 +60,17 @@ export const register = asyncHandler(async (request, response) => {
   response.status(201).json({
     data: {
       user: publicUser(createdUser),
-      organization: { id: createdOrganization.id, name: createdOrganization.name, slug: createdOrganization.slug, role: 'owner' },
+      organization: {
+        id: createdOrganization.id,
+        name: createdOrganization.name,
+        slug: createdOrganization.slug,
+        role: 'owner',
+      },
       accessToken: createAccessToken(createdUser),
       tokenType: 'Bearer',
     },
   })
 })
-
-const cryptoSlug = (id) => id.slice(-6).toLowerCase()
 
 export const login = asyncHandler(async (request, response) => {
   const user = await User.findOne({ email: request.body.email }).select('+passwordHash')
@@ -80,7 +83,9 @@ export const login = asyncHandler(async (request, response) => {
   await user.save({ validateBeforeSave: false })
   const refreshToken = await createRefreshSession(user, request)
   setRefreshCookie(response, refreshToken)
-  response.json({ data: { user: publicUser(user), accessToken: createAccessToken(user), tokenType: 'Bearer' } })
+  response.json({
+    data: { user: publicUser(user), accessToken: createAccessToken(user), tokenType: 'Bearer' },
+  })
 })
 
 export const refresh = asyncHandler(async (request, response) => {
@@ -96,7 +101,9 @@ export const refresh = asyncHandler(async (request, response) => {
     throw new AppError('This account is unavailable.', 401, 'ACCOUNT_UNAVAILABLE')
   }
   setRefreshCookie(response, rotated.token)
-  response.json({ data: { user: publicUser(user), accessToken: createAccessToken(user), tokenType: 'Bearer' } })
+  response.json({
+    data: { user: publicUser(user), accessToken: createAccessToken(user), tokenType: 'Bearer' },
+  })
 })
 
 export const logout = asyncHandler(async (request, response) => {
@@ -111,12 +118,14 @@ export const getCurrentUser = asyncHandler(async (request, response) => {
   response.json({
     data: {
       user: request.user,
-      organizations: memberships.filter((item) => item.organization?.status === 'active').map((item) => ({
-        id: item.organization.id,
-        name: item.organization.name,
-        slug: item.organization.slug,
-        role: item.role,
-      })),
+      organizations: memberships
+        .filter((item) => item.organization?.status === 'active')
+        .map((item) => ({
+          id: item.organization.id,
+          name: item.organization.name,
+          slug: item.organization.slug,
+          role: item.role,
+        })),
     },
   })
 })
