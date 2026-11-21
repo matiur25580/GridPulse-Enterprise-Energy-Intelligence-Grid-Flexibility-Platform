@@ -76,3 +76,58 @@ test('forecast backtest returns null metrics when there is insufficient history'
   assert.equal(result.metrics.maeKwh, null)
   assert.equal(result.metrics.mapePercent, null)
 })
+
+
+test('forecast backtest excludes zero-actual days from MAPE but includes them in error metrics', () => {
+  const daily = Array.from({ length: 9 }, (_item, index) => ({
+    _id: new Date(Date.UTC(2026, 1, index + 1)).toISOString().slice(0, 10),
+    energyKwh: index === 7 ? 0 : 100,
+  }))
+  const result = evaluateEnergyForecast(daily, 7)
+
+  assert.equal(result.evaluatedDays, 2)
+  assert.equal(result.predictions[0].actualKwh, 0)
+  assert.equal(result.predictions[0].absolutePercentageError, null)
+  const nonZeroActualErrors = result.predictions.filter((item) => item.actualKwh > 0)
+  const expectedMape = nonZeroActualErrors.reduce((sum, item) => sum + item.absolutePercentageError, 0) / nonZeroActualErrors.length
+  const expectedWape = result.predictions.reduce((sum, item) => sum + item.absoluteErrorKwh, 0) /
+    result.predictions.reduce((sum, item) => sum + item.actualKwh, 0) * 100
+  assert.equal(result.metrics.mapePercent, Number(expectedMape.toFixed(2)))
+  assert.equal(result.metrics.weightedAbsolutePercentageError, Number(expectedWape.toFixed(2)))
+  assert.ok(result.metrics.maeKwh > 0)
+  assert.ok(result.metrics.rmseKwh >= result.metrics.maeKwh)
+  assert.ok(Number.isFinite(result.metrics.meanErrorKwh)
+})
+
+test('forecast backtest predictions do not use the target day or later observations', () => {
+  const daily = Array.from({ length: 12 }, (_item, index) => ({
+    _id: new Date(Date.UTC(2026, 2, index + 1)).toISOString().slice(0, 10),
+    energyKwh: 80 + index,
+  }))
+  const changedFuture = daily.map((item, index) => ({
+    ...item,
+    energyKwh: index === 11 ? 9000 : item.energyKwh,
+  }))
+
+  const original = evaluateEnergyForecast(daily, 5)
+  const changed = evaluateEnergyForecast(changedFuture, 5)
+  assert.equal(original.evaluatedDays, 5)
+  assert.deepEqual(
+    changed.predictions.map((item) => item.predictedKwh),
+    original.predictions.map((item) => item.predictedKwh),
+  )
+})
+
+test('forecast backtest reports errors for all-zero actuals while percentage metrics remain undefined', () => {
+  const daily = Array.from({ length: 9 }, (_item, index) => ({
+    _id: new Date(Date.UTC(2026, 3, index + 1)).toISOString().slice(0, 10),
+    energyKwh: 0,
+  }))
+  const result = evaluateEnergyForecast(daily, 7)
+
+  assert.equal(result.evaluatedDays, 2)
+  assert.equal(result.metrics.maeKwh, 0)
+  assert.equal(result.metrics.rmseKwh, 0)
+  assert.equal(result.metrics.mapePercent, null)
+  assert.equal(result.metrics.weightedAbsolutePercentageError, null)
+})
