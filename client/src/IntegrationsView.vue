@@ -69,6 +69,7 @@ watch(() => props.organizationId, () => {
   meterId.value = ''; facilityId.value = ''; tariffId.value = ''; latestReconciliation.value = null
   void loadWorkspace()
 })
+watch(selectedTariff, (tariff) => { if (tariff) currency.value = tariff.currency })
 watch(facilityId, () => {
   latestReconciliation.value = null
   if (selectedTariff.value) currency.value = selectedTariff.value.currency
@@ -174,7 +175,7 @@ async function submitReconciliation() {
     <div class="integration-history-grid">
       <article class="integration-panel"><div class="integration-panel-head"><div><h3>Import batch history</h3><p>Auditable ingestion activity</p></div><b>{{ batches.length }} batches</b></div>
         <div v-if="!batches.length" class="integration-empty">No CSV meter imports recorded yet.</div>
-        <div v-for="batch in batches" :key="batch._id" class="integration-history-row"><span><b>{{ batch.fileName }}</b><small>{{ batch.externalBatchId }} · {{ new Date(batch.startedAt).toLocaleString() }}</small></span><span class="integration-counts">{{ batch.inserted }} inserted · {{ batch.duplicates }} duplicates</span><span class="integration-chip" :class="batch.status==='completed'?'integration-good':batch.status==='failed'?'integration-warn':''">{{ batch.status }}</span></div>
+        <div v-for="batch in batches" :key="batch._id" class="integration-history-row"><span><b>{{ batch.fileName }}</b><small>{{ batch.externalBatchId }} · {{ new Date(batch.startedAt).toLocaleString() }}</small></span><span class="integration-counts">{{ batch.inserted }} inserted · {{ batch.duplicates }} duplicates</span><span class="integration-chip" :class="batch.status==='completed'?'integration-good':batch.status==='failed'?'integration-warn':''">{{ batch.status }}</span><small v-if="batch.errorSummary" class="integration-warn">{{ batch.errorSummary }}</small></div>
       </article>
       <article class="integration-panel"><div class="integration-panel-head"><div><h3>Utility invoice register</h3><p>Recorded actual bills and comparison outcomes</p></div><b>{{ invoices.length }} invoices</b></div>
         <div v-if="!invoices.length" class="integration-empty">No utility invoices reconciled yet.</div>
