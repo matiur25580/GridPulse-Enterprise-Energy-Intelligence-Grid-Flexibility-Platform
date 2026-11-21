@@ -27,7 +27,7 @@ export async function importMeterCsv({ organizationId, userId, meterId, input })
     if (!batch) throw error
     if (batch.payloadHash !== payloadHash) throw new AppError('This batch ID was already used with different CSV content. Use a new batch ID.', 409, 'IMPORT_BATCH_PAYLOAD_MISMATCH')
     if (batch.status === 'completed') return { batch, replayed: true }
-    if (batch.status === 'processing') throw new AppError('This import batch is already processing.', 409, 'IMPORT_BATCH_IN_PROGRESS')
+    if (batch.status === 'processing' && Date.now() - batch.startedAt.getTime() < 15 * 60 * 1000) throw new AppError('This import batch is already processing.', 409, 'IMPORT_BATCH_IN_PROGRESS')
     batch.status = 'processing'; batch.received = readings.length; batch.inserted = 0
     batch.duplicates = 0; batch.errorSummary = undefined; batch.startedAt = new Date(); batch.completedAt = undefined
     await batch.save()
