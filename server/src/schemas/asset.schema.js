@@ -1,6 +1,6 @@
 import { z } from 'zod'
 
-const objectId = z.string().regex(/^[a-f\\d]{24}$/i, 'A valid identifier is required.')
+const objectId = z.string().regex(/^[a-f\d]{24}$/i, 'A valid identifier is required.')
 const optionalAddress = z.object({
   line1: z.string().trim().max(160).optional(),
   city: z.string().trim().max(80).optional(),
@@ -52,6 +52,10 @@ export const ingestReadingsSchema = z.object({
     }
     ids.add(reading.externalId)
   })
+})
+
+export const listMetersQuerySchema = z.object({
+  facilityId: objectId.optional(),
 })
 
 export const listReadingsQuerySchema = z.object({
