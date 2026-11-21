@@ -7,6 +7,7 @@ import { Facility } from '../models/facility.model.js'
 import { GatewaySource } from '../models/gateway-source.model.js'
 import { AppError } from '../utils/app-error.js'
 import { exceedsEnergyThreshold, isAlertStale } from '../utils/alert-conditions.js'
+import { enqueueIncidentNotification } from './alert-notifications.service.js'
 
 async function assertRuleTarget({ organizationId, targetId, targetType }) {
   const Model = targetType === 'facility' ? Facility : targetType === 'meter' ? Meter : GatewaySource
@@ -94,6 +95,7 @@ async function recordCondition({ rule, condition, now, userId }) {
       active.resolvedBy = userId ?? undefined
       active.resolutionReason = 'condition_cleared'
       await active.save()
+      await enqueueIncidentNotification({ incident: active, event: 'incident_recovered' }).catch(error => console.error('Could not enqueue incident recovery notification:', error))
       return 'recovered'
     }
     return 'clear'
@@ -108,12 +110,13 @@ async function recordCondition({ rule, condition, now, userId }) {
     return 'updated'
   }
   try {
-    await EnergyIncident.create({
+    const incident = await EnergyIncident.create({
       organization: rule.organization, rule: rule._id, fingerprint, type: rule.type,
       title: condition.title, description: condition.description, severity: rule.severity,
       firstSeenAt: now, lastSeenAt: now, occurrences: 1,
       observedValue: condition.observedValue, thresholdValue: condition.thresholdValue, unit: condition.unit,
     })
+    await enqueueIncidentNotification({ incident, event: 'incident_opened' }).catch(error => console.error('Could not enqueue incident notification:', error))
     return 'created'
   } catch (error) {
     if (error.code !== 11000) throw error
@@ -155,6 +158,7 @@ export async function updateIncidentStatus({ organizationId, incidentId, status,
     incident.resolutionReason = 'operator_resolved'
   }
   await incident.save()
+  if (status === 'resolved') await enqueueIncidentNotification({ incident, event: 'incident_resolved' }).catch(error => console.error('Could not enqueue incident resolution notification:', error))
   return incident
 }
 
