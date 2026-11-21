@@ -42,7 +42,7 @@ export const estimateBillSchema = z.object({
   from: dateOnly,
   to: dateOnly,
 }).refine((value) => value.from <= value.to, { message: 'Billing start must be earlier than or equal to end.', path: ['from'] })
-  .refine((value) => (Date.parse(value.to + 'T00:00:00Z') - Date.parse(value.from + 'T00:00:00Z')) / 86400000 <= 366, {
+  .refine((value) => (Date.parse(value.to + 'T00:00:00Z') - Date.parse(value.from + 'T00:00:00Z')) / 86400000 <= 365, {
     message: 'Billing periods cannot exceed 366 days.', path: ['to'],
   })
 
