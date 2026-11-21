@@ -141,6 +141,15 @@ After sign-in, the client loads the user's organizations and allows switching be
 
 The overview requests `GET /organizations/:organizationId/analytics/overview` for the selected 7-, 30-, or 90-day window. Charts, summary metrics, and facility rows use the returned API data. If no readings exist, the UI displays an empty state rather than fabricated operational figures. New accounts can be created from the sign-in screen; the registration API creates the first organization and owner membership.
 
+### Facility, meter, and telemetry workspace
+
+The authenticated dashboard includes an asset-operations workspace with three views:
+
+- **Facilities:** list organization facilities and create a site with a unique organization-scoped code, facility type, timezone, and address details.
+- **Meters:** browse the organization's meters, filter by facility, and register a meter against an active facility. The server verifies the facility belongs to the current organization.
+- **Energy readings:** inspect the latest 20 readings for a selected meter and submit a manual reading with timestamp, kWh, optional kW demand and power factor, source, and quality metadata.
+
+Create and ingestion controls are shown to owner, admin, and operator members. The API remains authoritative for permissions; read-only roles can browse inventory and readings. Each manual reading receives a unique event ID so retries are safe under the server's idempotent ingestion contract. The workspace refreshes its inventory and reading list after successful writes.
 ### Tenant and role controls
 
 Every facility, meter, and reading query is scoped to the organization resolved from the authenticated user's active membership. A meter can only be registered against a facility in that same organization. The organization ID in the URL is a lookup context, never proof of access.
@@ -160,8 +169,8 @@ Roles available: `owner`, `admin`, `operator`, `analyst`, and `viewer`. All memb
 
 1. Foundation and API conventions — implemented.
 2. Authentication, organizations, memberships, tenant-aware authorization — initial implementation complete; integration hardening remains.
-3. Facilities, meters, and energy-reading ingestion — initial APIs and models implemented; database-backed integration tests remain.
-4. Portfolio analytics endpoint and responsive dashboard preview — initial implementation complete; authenticated live-data UI wiring and integration tests remain.
+3. Facilities, meters, and energy-reading ingestion — APIs, models, and authenticated management UI implemented; database-backed integration tests remain.
+4. Portfolio analytics endpoint and authenticated live-data dashboard — initial implementation complete; integration tests remain.
 5. Forecasting, anomaly detection, and model evaluation.
 6. Optimization scenarios and demand-response simulation.
 7. Renewable assets, billing, reporting, audit, and operational hardening.
