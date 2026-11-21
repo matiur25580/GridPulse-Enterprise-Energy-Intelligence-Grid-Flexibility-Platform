@@ -169,6 +169,54 @@ export const reportingApi = {
     apiRequest<EnergyReport>(`/organizations/${encodeURIComponent(organizationId)}/reports/energy?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&gridEmissionFactorKgPerKwh=${gridEmissionFactorKgPerKwh}`),
 }
 
+
+export interface BillingFacility { _id: string; name: string; code: string; timezone: string; status: string }
+export interface TariffRateInput { label: string; ratePerKwh: number; hours: number[]; daysOfWeek: number[] }
+export interface TariffPlan {
+  _id: string
+  facility: BillingFacility | string
+  name: string
+  currency: string
+  defaultRatePerKwh: number
+  energyRates: TariffRateInput[]
+  demandChargePerKw: number
+  fixedCharge: number
+  taxRatePercent: number
+  effectiveFrom: string
+  effectiveTo: string | null
+  status: string
+}
+export interface EnergyBill {
+  _id: string
+  facility: { _id: string; name: string; code: string }
+  tariff: { _id: string; name: string; currency: string }
+  periodStart: string
+  periodEnd: string
+  currency: string
+  status: 'estimate'
+  summary: { totalEnergyKwh: number; energyCharge: number; peakDemandKw: number | null; demandCharge: number; fixedCharge: number; subtotal: number; taxRatePercent: number; tax: number; total: number; averageRatePerKwh: number | null; averagePowerFactor: number | null; readingCount: number; estimatedReadings: number }
+  charges: Array<{ code: string; label: string; amount: number }>
+  daily: Array<{ date: string; energyKwh: number; energyCharge: number; demandKw: number | null; readingCount: number }>
+  comparison: { previousPeriod: { from: string; to: string }; energyChangeKwh: number; energyChangePercent: number | null; estimatedCostChange: number; estimatedCostChangePercent: number | null; previousEstimatedCost: number; methodology: string } | null
+  insights: string[]
+  coverage: { readingCount: number; estimatedReadings: number; observedHours: number; observedDays: number; meterSource: string; timezone: string; dataQuality: string; periodDays: number }
+  generatedAt: string
+}
+export const billingApi = {
+  facilities: (organizationId: string) => apiRequest<BillingFacility[]>(`/organizations/${encodeURIComponent(organizationId)}/facilities`),
+  tariffs: (organizationId: string, facilityId?: string) =>
+    apiRequest<TariffPlan[]>(`/organizations/${encodeURIComponent(organizationId)}/billing/tariffs${facilityId ? '?facilityId=' + encodeURIComponent(facilityId) : ''}`),
+  createTariff: (organizationId: string, input: {
+    facilityId: string; name: string; currency: string; defaultRatePerKwh: number
+    energyRates: TariffRateInput[]; demandChargePerKw: number; fixedCharge: number
+    taxRatePercent: number; effectiveFrom: string; effectiveTo: string | null
+  }) => apiRequest<TariffPlan>(`/organizations/${encodeURIComponent(organizationId)}/billing/tariffs`, { method: 'POST', body: JSON.stringify(input) }),
+  estimate: (organizationId: string, input: { facilityId: string; tariffId: string; from: string; to: string }) =>
+    apiRequest<EnergyBill>(`/organizations/${encodeURIComponent(organizationId)}/billing/bills/estimate`, { method: 'POST', body: JSON.stringify(input) }),
+  bills: (organizationId: string, facilityId?: string) =>
+    apiRequest<EnergyBill[]>(`/organizations/${encodeURIComponent(organizationId)}/billing/bills${facilityId ? '?facilityId=' + encodeURIComponent(facilityId) : ''}`),
+}
+
 export interface User { id: string; name: string; email: string }
 export interface Organization { id: string; name: string; slug: string; role: string }
 export interface EnergyOverview {
