@@ -2,161 +2,111 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import mongoose from 'mongoose'
 import { EnergyReading } from '../src/models/energy-reading.model.js'
+import { Meter } from '../src/models/meter.model.js'
 import { Facility } from '../src/models/facility.model.js'
 import { TariffPlan } from '../src/models/tariff-plan.model.js'
 import { EnergyBill } from '../src/models/energy-bill.model.js'
 import { estimateAndSaveBill } from '../src/services/billing.service.js'
 
-const organizationId = new mongoose.Types.ObjectId()
-const otherOrganizationId = new mongoose.Types.ObjectId()
-const facilityId = new mongoose.Types.ObjectId()
-const tariffId = new mongoose.Types.ObjectId()
-const userId = new mongoose.Types.ObjectId()
+const mongoUri = process.env.MONGODB_URI
 
-const facility = {
-  _id: facilityId,
-  organization: organizationId,
-  status: 'active',
-  timezone: 'Asia/Kolkata',
-}
-const tariff = {
-  _id: tariffId,
-  organization: organizationId,
-  facility: facilityId,
-  status: 'active',
-  effectiveFrom: new Date('2026-01-01T00:00:00.000Z'),
-  effectiveTo: null,
-  currency: 'INR',
-  name: 'Test tariff',
-  defaultRatePerKwh: 8,
-  energyRates: [],
-  demandChargePerKw: 100,
-  fixedCharge: 0,
-  taxRatePercent: 0,
-}
+async function createFixture(t) {
+  const organizationId = new mongoose.Types.ObjectId()
+  const otherOrganizationId = new mongoose.Types.ObjectId()
+  const facilityId = new mongoose.Types.ObjectId()
+  const tariffId = new mongoose.Types.ObjectId()
+  const userId = new mongoose.Types.ObjectId()
 
-function installModelStubs(t, aggregate) {
-  const originals = {
-    aggregate: EnergyReading.aggregate,
-    facilityFindOne: Facility.findOne,
-    tariffFindOne: TariffPlan.findOne,
-    billFindOneAndUpdate: EnergyBill.findOneAndUpdate,
-  }
-
-  Facility.findOne = (filter) => {
-    assert.equal(String(filter._id), String(facilityId))
-    assert.equal(String(filter.organization), String(organizationId))
-    return { lean: async () => facility }
-  }
-  TariffPlan.findOne = (filter) => {
-    assert.equal(String(filter._id), String(tariffId))
-    assert.equal(String(filter.organization), String(organizationId))
-    assert.equal(String(filter.facility), String(facilityId))
-    return { lean: async () => tariff }
-  }
-  EnergyReading.aggregate = aggregate
-
-  let savedSnapshot
-  EnergyBill.findOneAndUpdate = (_filter, update) => {
-    savedSnapshot = update.$set
-    return {
-      populate() { return this },
-      lean: async () => savedSnapshot,
-    }
-  }
-
-  t.after(() => {
-    EnergyReading.aggregate = originals.aggregate
-    Facility.findOne = originals.facilityFindOne
-    TariffPlan.findOne = originals.tariffFindOne
-    EnergyBill.findOneAndUpdate = originals.billFindOneAndUpdate
+  await Facility.create({
+    _id: facilityId, organization: organizationId, name: 'Integration facility',
+    code: `INT-${facilityId.toString().slice(-8)}`, timezone: 'Asia/Kolkata',
+    status: 'active', createdBy: userId,
+  })
+  await TariffPlan.create({
+    _id: tariffId, organization: organizationId, facility: facilityId,
+    name: 'Integration tariff', currency: 'INR', defaultRatePerKwh: 8,
+    energyRates: [], demandChargePerKw: 0, fixedCharge: 0, taxRatePercent: 0,
+    effectiveFrom: new Date('2026-01-01T00:00:00.000Z'), effectiveTo: null,
+    status: 'active', createdBy: userId,
   })
 
-  return () => savedSnapshot
+  t.after(async () => {
+    await Promise.all([
+      EnergyReading.deleteMany({ organization: { $in: [organizationId, otherOrganizationId] } }),
+      Meter.deleteMany({ organization: { $in: [organizationId, otherOrganizationId] } }),
+      EnergyBill.deleteMany({ organization: organizationId }),
+      TariffPlan.deleteMany({ organization: organizationId }),
+      Facility.deleteMany({ organization: organizationId }),
+    ])
+  })
+
+  return { organizationId, otherOrganizationId, facilityId, tariffId, userId }
 }
 
-const input = {
-  organizationId,
-  userId,
-  input: {
-    facilityId,
-    tariffId,
-    from: '2026-11-01',
-    to: '2026-11-01',
-  },
+async function createMeter({ organizationId, facilityId, userId, meterType, name }) {
+  return Meter.create({
+    organization: organizationId, facility: facilityId, name,
+    serialNumber: `${name}-${new mongoose.Types.ObjectId().toString().slice(-8)}`,
+    meterType, status: 'active', createdBy: userId,
+  })
 }
 
-const currentRows = [{
-  _id: { date: '2026-11-01', hour: 10, dayOfWeek: 0 },
-  energyKwh: 12,
-  peakDemandKw: 3,
-  averagePowerFactor: 0.98,
-  readingCount: 1,
-  estimatedReadings: 0,
-}]
+async function createReading({ organizationId, facilityId, meter, energyKwh, externalId }) {
+  return EnergyReading.create({
+    organization: organizationId, facility: facilityId, meter: meter._id,
+    externalId, recordedAt: new Date('2026-11-01T10:00:00.000Z'),
+    energyKwh, demandKw: 2, powerFactor: 0.98, source: 'simulation', quality: 'valid',
+  })
+}
 
-test('billing aggregation scopes readings and joined meters to the requested tenant and facility', async (t) => {
-  const pipelines = []
-  let call = 0
-  installModelStubs(t, async (pipeline) => {
-    pipelines.push(pipeline)
-    call += 1
-    if (call === 1) return currentRows
-    return []
+async function estimate(fixture) {
+  return estimateAndSaveBill({
+    organizationId: fixture.organizationId,
+    userId: fixture.userId,
+    input: { facilityId: fixture.facilityId, tariffId: fixture.tariffId, from: '2026-11-01', to: '2026-11-01' },
+  })
+}
+
+test('billing aggregation against MongoDB', { skip: !mongoUri && 'Set MONGODB_URI to run real MongoDB billing integration tests' }, async (t) => {
+  await mongoose.connect(mongoUri, { serverSelectionTimeoutMS: 10000 })
+  t.after(async () => { await mongoose.disconnect() })
+
+  await t.test('isolates readings by tenant and excludes meters owned by another tenant', async (t) => {
+    const fixture = await createFixture(t)
+    const mainMeter = await createMeter({ ...fixture, meterType: 'main', name: 'tenant-main' })
+    const foreignMeter = await createMeter({
+      organizationId: fixture.otherOrganizationId, facilityId: fixture.facilityId,
+      userId: fixture.userId, meterType: 'main', name: 'foreign-main',
+    })
+    await createReading({ ...fixture, meter: mainMeter, energyKwh: 5, externalId: 'tenant-reading' })
+    // Deliberately inconsistent cross-tenant reference: the aggregation's $lookup must reject it.
+    await createReading({ ...fixture, meter: foreignMeter, energyKwh: 900, externalId: 'foreign-meter-reading' })
+
+    const bill = await estimate(fixture)
+    assert.equal(bill.summary.totalEnergyKwh, 5)
+    assert.equal(bill.coverage.meterSource, 'main')
+    assert.equal(bill.summary.readingCount, 1)
   })
 
-  await estimateAndSaveBill(input)
+  await t.test('uses submeter readings only when the main-meter query is empty', async (t) => {
+    const fixture = await createFixture(t)
+    const submeter = await createMeter({ ...fixture, meterType: 'submeter', name: 'fallback-submeter' })
+    await createReading({ ...fixture, meter: submeter, energyKwh: 7, externalId: 'submeter-reading' })
 
-  const currentPipeline = pipelines[0]
-  const readingMatch = currentPipeline.find((stage) => stage.$match)?.$match
-  assert.equal(String(readingMatch.organization), String(organizationId))
-  assert.equal(String(readingMatch.facility), String(facilityId))
-  assert.deepEqual(readingMatch.quality.$in, ['valid', 'estimated'])
-
-  const meterLookup = currentPipeline.find((stage) => stage.$lookup)?.$lookup
-  assert.equal(meterLookup.from, 'meters')
-  const meterConditions = meterLookup.pipeline.find((stage) => stage.$match).$match.$expr.$and
-  assert.ok(meterConditions.some((condition) => condition.$eq?.[0] === '$organization' && condition.$eq?.[1] === organizationId))
-  assert.ok(meterConditions.some((condition) => condition.$eq?.[0] === '$facility' && condition.$eq?.[1] === facilityId))
-  assert.ok(meterConditions.some((condition) => condition.$eq?.[0] === '$status' && condition.$eq?.[1] === 'active'))
-  assert.ok(meterConditions.some((condition) => condition.$in?.[0] === '$meterType' && condition.$in?.[1].includes('main')))
-  assert.ok(!meterConditions.some((condition) => condition.$eq?.[1] === otherOrganizationId))
-})
-
-test('billing falls back to submeters only when no main-meter readings exist', async (t) => {
-  const meterTypesByCall = []
-  const snapshots = installModelStubs(t, async (pipeline) => {
-    const lookup = pipeline.find((stage) => stage.$lookup)?.$lookup
-    const meterTypeCondition = lookup.pipeline.find((stage) => stage.$match).$match.$expr.$and
-      .find((condition) => condition.$in?.[0] === '$meterType')
-    const meterTypes = meterTypeCondition.$in[1]
-    meterTypesByCall.push(meterTypes)
-    if (meterTypes.includes('main') && meterTypesByCall.length === 1) return []
-    if (meterTypes.includes('submeter') && meterTypesByCall.length === 2) return currentRows
-    return []
+    const bill = await estimate(fixture)
+    assert.equal(bill.summary.totalEnergyKwh, 7)
+    assert.equal(bill.coverage.meterSource, 'submeter_fallback')
   })
 
-  const result = await estimateAndSaveBill(input)
-  assert.deepEqual(meterTypesByCall.slice(0, 2), [['main'], ['submeter']])
-  assert.equal(result.coverage.meterSource, 'submeter_fallback')
-  assert.equal(result.summary.totalEnergyKwh, 12)
-  assert.ok(snapshots())
-})
+  await t.test('prefers main-meter readings when both main meters and submeters have data', async (t) => {
+    const fixture = await createFixture(t)
+    const mainMeter = await createMeter({ ...fixture, meterType: 'main', name: 'preferred-main' })
+    const submeter = await createMeter({ ...fixture, meterType: 'submeter', name: 'ignored-submeter' })
+    await createReading({ ...fixture, meter: mainMeter, energyKwh: 11, externalId: 'main-reading' })
+    await createReading({ ...fixture, meter: submeter, energyKwh: 70, externalId: 'submeter-reading' })
 
-test('billing uses main-meter readings before considering submeter fallback', async (t) => {
-  const meterTypesByCall = []
-  installModelStubs(t, async (pipeline) => {
-    const lookup = pipeline.find((stage) => stage.$lookup)?.$lookup
-    const meterTypeCondition = lookup.pipeline.find((stage) => stage.$match).$match.$expr.$and
-      .find((condition) => condition.$in?.[0] === '$meterType')
-    const meterTypes = meterTypeCondition.$in[1]
-    meterTypesByCall.push(meterTypes)
-    if (meterTypes.includes('main') && meterTypesByCall.length === 1) return currentRows
-    return []
+    const bill = await estimate(fixture)
+    assert.equal(bill.summary.totalEnergyKwh, 11)
+    assert.equal(bill.coverage.meterSource, 'main')
   })
-
-  const result = await estimateAndSaveBill(input)
-  assert.equal(result.coverage.meterSource, 'main')
-  assert.deepEqual(meterTypesByCall.slice(0, 2), [['main'], ['main']])
-  assert.deepEqual(meterTypesByCall.slice(0, 3), [['main'], ['main'], ['submeter']])
 })
