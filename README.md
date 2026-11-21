@@ -12,6 +12,7 @@ GridPulse is a MEVN-based platform for multi-site energy monitoring, demand fore
 - Ingest and explore time-series electricity readings.
 - Forecast demand and explain model performance.
 - Recommend cost-aware, constraint-aware energy schedules.
+- Model facility-specific tariffs and estimate transparent energy bills.
 - Simulate demand-response participation and measure outcomes.
 - Provide tenant isolation, role-based access, and auditable operations.
 
