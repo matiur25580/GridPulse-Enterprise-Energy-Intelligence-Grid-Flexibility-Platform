@@ -26,6 +26,9 @@ const actionId = ref('')
 const error = ref('')
 const success = ref('')
 const lastEvaluation = ref('')
+const notificationEnabled = ref(false)
+const notificationEmails = ref('')
+const savingNotifications = ref(false)
 const canManage = computed(() => ['owner', 'admin', 'operator'].includes(props.role))
 const targetOptions = computed(() => targetType.value === 'facility'
   ? facilities.value.filter(item => item.status === 'active').map(item => ({ id: item._id, label: item.name + ' · ' + item.code }))
@@ -62,6 +65,11 @@ async function load() {
     facilities.value = facilityData
     meters.value = meterData
     gateways.value = gatewayData
+    if (['owner', 'admin'].includes(props.role)) {
+      const settings = await alertsApi.notificationSettings(props.organizationId)
+      notificationEnabled.value = settings.enabled
+      notificationEmails.value = settings.emails.join(', ')
+    }
     if (!targetId.value) targetId.value = targetOptions.value[0]?.id ?? ''
   } catch (cause) { error.value = cause instanceof Error ? cause.message : 'Unable to load alert operations.' }
   finally { loading.value = false }
@@ -69,6 +77,16 @@ async function load() {
 watch(() => props.organizationId, () => { rules.value = []; incidents.value = []; targetId.value = ''; void load() })
 onMounted(load)
 
+async function saveNotifications() {
+  error.value = ''; success.value = ''
+  const emails = notificationEmails.value.split(/[\\n,;]/).map(value => value.trim()).filter(Boolean)
+  savingNotifications.value = true
+  try {
+    await alertsApi.saveNotificationSettings(props.organizationId, { enabled: notificationEnabled.value, emails })
+    success.value = notificationEnabled.value ? 'Incident email recipients saved.' : 'Incident email notifications disabled.'
+  } catch (cause) { error.value = cause instanceof Error ? cause.message : 'Unable to save notification settings.' }
+  finally { savingNotifications.value = false }
+}
 async function createRule() {
   error.value = ''; success.value = ''
   if (!name.value.trim() || !targetId.value) { error.value = 'Enter a rule name and select a target.'; return }
@@ -156,6 +174,15 @@ async function updateIncident(incident: EnergyIncident, status: 'acknowledged' |
         </div>
       </article>
     </div>
-    <article class="alerts-panel alerts-run-history"><div class="alerts-panel-head"><div><h3>Evaluation history</h3><p>Scheduled and operator-initiated monitoring runs</p></div><span class="alerts-count">{{ evaluations.length }} recent runs</span></div><div class="alerts-run-list"><div v-for="run in evaluations" :key="run._id" class="alerts-run"><div><b>{{ run.trigger === 'scheduler' ? 'Automatic scheduler' : 'Manual evaluation' }}</b><span class="alerts-run-status" :class="'run-' + run.status">{{ run.status }}</span></div><small>{{ new Date(run.startedAt).toLocaleString() }} · {{ run.durationMs == null ? '—' : run.durationMs + ' ms' }} · {{ run.evaluatedRules }} rules</small><small v-if="run.status==='succeeded'">{{ run.created }} created · {{ run.updated }} updated · {{ run.recovered }} recovered</small><small v-if="run.errorMessage" class="alerts-run-error">{{ run.errorMessage }}</small></div><div v-if="!evaluations.length" class="alerts-empty">No evaluation runs have been recorded yet.</div></div></article><p class="alerts-footnote">Automatic evaluation is controlled by ALERT_EVALUATION_INTERVAL_SECONDS (default 300 seconds) and coordinated across API instances with a renewable MongoDB lease. Set it to 0 to disable the worker. Email, SMS and push notification delivery are not configured in this release. High-consumption checks sum valid and estimated readings inside the configured window; silence checks use the latest received meter reading or successful gateway delivery.</p>
+    <article class="alerts-panel alerts-run-history"><div class="alerts-panel-head"><div><h3>Evaluation history</h3><p>Scheduled and operator-initiated monitoring runs</p></div><span class="alerts-count">{{ evaluations.length }} recent runs</span></div><div class="alerts-run-list"><div v-for="run in evaluations" :key="run._id" class="alerts-run"><div><b>{{ run.trigger === 'scheduler' ? 'Automatic scheduler' : 'Manual evaluation' }}</b><span class="alerts-run-status" :class="'run-' + run.status">{{ run.status }}</span></div><small>{{ new Date(run.startedAt).toLocaleString() }} · {{ run.durationMs == null ? '—' : run.durationMs + ' ms' }} · {{ run.evaluatedRules }} rules</small><small v-if="run.status==='succeeded'">{{ run.created }} created · {{ run.updated }} updated · {{ run.recovered }} recovered</small><small v-if="run.errorMessage" class="alerts-run-error">{{ run.errorMessage }}</small></div><div v-if="!evaluations.length" class="alerts-empty">No evaluation runs have been recorded yet.</div></div></article><article v-if="['owner', 'admin'].includes(role)" class="alerts-panel alerts-run-history">
+      <div class="alerts-panel-head"><div><h3>Incident email notifications</h3><p>Route new incidents and recovery updates to your operations team</p></div><span class="alerts-count">Owner / admin</span></div>
+      <form class="alerts-form" @submit.prevent="saveNotifications">
+        <label class="alerts-notification-toggle"><input v-model="notificationEnabled" type="checkbox"> Enable organization email notifications</label>
+        <label>Recipient email addresses<textarea v-model="notificationEmails" rows="3" placeholder="energy-ops@example.com, facility-lead@example.com"></textarea><small>Separate up to 25 unique addresses with commas or new lines.</small></label>
+        <button class="alerts-primary" type="submit" :disabled="savingNotifications">{{ savingNotifications ? 'Saving…' : 'Save notification settings' }}</button>
+        <small>Email delivery also requires the server administrator to configure Resend credentials. Queued messages remain pending until the provider is configured.</small>
+      </form>
+    </article>
+    <p class="alerts-footnote">Automatic evaluation is controlled by ALERT_EVALUATION_INTERVAL_SECONDS (default 300 seconds) and coordinated across API instances with a renewable MongoDB lease. Email delivery uses a durable outbox and ALERT_NOTIFICATION_INTERVAL_SECONDS (default 15 seconds). High-consumption checks sum valid and estimated readings inside the configured window; silence checks use the latest received meter reading or successful gateway delivery. SMS and push delivery are not implemented.</p>
   </section>
 </template>
