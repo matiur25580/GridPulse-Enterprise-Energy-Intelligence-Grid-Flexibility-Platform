@@ -13,7 +13,7 @@ async function start() {
 }
 async function shutdown(signal) {
   console.info(`${signal} received; shutting down GridPulse API`)
-  stopAlertEvaluationWorker()
+  await stopAlertEvaluationWorker()
   if (server) await new Promise((resolve) => server.close(resolve))
   await disconnectDatabase()
   process.exit(0)
