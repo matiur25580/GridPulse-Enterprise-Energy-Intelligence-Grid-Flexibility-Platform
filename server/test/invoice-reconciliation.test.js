@@ -31,3 +31,9 @@ test('does not fabricate percentage or demand variance when comparison data is u
   assert.ok(result.notes.some((note) => note.includes('Percentage variance is unavailable')))
   assert.ok(result.notes.some((note) => note.includes('Demand comparison is unavailable')))
 })
+
+test('treats matching zero-value estimates as within tolerance without percentage division', () => {
+  const result = calculateInvoiceReconciliation({ ...base, actualAmount: 0, estimatedAmount: 0, actualEnergyKwh: 0, estimatedEnergyKwh: 0 })
+  assert.equal(result.status, 'within_tolerance')
+  assert.equal(result.amountVariancePercent, null)
+})
