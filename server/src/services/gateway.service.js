@@ -78,7 +78,8 @@ export async function ingestGatewayEvents({ source, events }) {
       } }, upsert: true,
     } }
   })
-  const meters = await Meter.find({ _id: { $in: [...new Set(mapping.values())] }, organization: source.organization }).select('_id facility').lean()
+  const meters = await Meter.find({ _id: { $in: [...new Set(mapping.values())] }, organization: source.organization, status: 'active' }).select('_id facility').lean()
+  if (meters.length !== new Set(mapping.values()).size) throw new AppError('A mapped local meter is no longer active in this organization.', 422, 'GATEWAY_METER_MAPPING_INACTIVE')
   const facilityByMeter = new Map(meters.map((meter) => [meter._id.toString(), meter.facility]))
   for (const operation of operations) {
     const meterId = operation.updateOne.update.$setOnInsert.meter
