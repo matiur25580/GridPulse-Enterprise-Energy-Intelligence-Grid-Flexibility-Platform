@@ -5,15 +5,15 @@ import { createAlertRuleSchema, listIncidentsQuerySchema, updateIncidentSchema }
 const id = '507f1f77bcf86cd799439011'
 
 test('requires a positive energy threshold for high-consumption rules', () => {
-  assert.equal(createAlertRuleSchema.safeParse({ name: 'Peak watch', type: 'high_consumption', targetId: id, thresholdKwh: 12 }).success, true)
-  assert.equal(createAlertRuleSchema.safeParse({ name: 'Peak watch', type: 'high_consumption', targetId: id }).success, false)
-  assert.equal(createAlertRuleSchema.safeParse({ name: 'Peak watch', type: 'high_consumption', targetId: id, thresholdKwh: 0 }).success, false)
+  assert.equal(createAlertRuleSchema.safeParse({ name: 'Peak watch', type: 'high_consumption', targetId: id, targetType: 'facility', thresholdKwh: 12 }).success, true)
+  assert.equal(createAlertRuleSchema.safeParse({ name: 'Peak watch', type: 'high_consumption', targetId: id, targetType: 'facility' }).success, false)
+  assert.equal(createAlertRuleSchema.safeParse({ name: 'Peak watch', type: 'high_consumption', targetId: id, targetType: 'facility', thresholdKwh: 0 }).success, false)
 })
 
 test('validates rule intervals, target IDs and severities', () => {
-  assert.equal(createAlertRuleSchema.safeParse({ name: 'Meter silence', type: 'meter_silent', targetId: id, staleAfterMinutes: 30, severity: 'high' }).success, true)
+  assert.equal(createAlertRuleSchema.safeParse({ name: 'Meter silence', type: 'meter_silent', targetId: id, targetType: 'meter', staleAfterMinutes: 30, severity: 'high' }).success, true)
   assert.equal(createAlertRuleSchema.safeParse({ name: 'Meter silence', type: 'meter_silent', targetId: 'invalid' }).success, false)
-  assert.equal(createAlertRuleSchema.safeParse({ name: 'Meter silence', type: 'meter_silent', targetId: id, staleAfterMinutes: 2 }).success, false)
+  assert.equal(createAlertRuleSchema.safeParse({ name: 'Meter silence', type: 'meter_silent', targetId: id, targetType: 'meter', staleAfterMinutes: 2 }).success, false)
 })
 
 test('bounds incident filters and only allows forward incident transitions', () => {
