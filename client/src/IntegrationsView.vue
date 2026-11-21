@@ -212,6 +212,37 @@ async function submitReconciliation() {
         <div v-else class="integration-empty">Your organization role is read-only for meter imports.</div>
         <p class="integration-note">Required columns: externalId, recordedAt, energyKwh. Optional: demandKw, voltageV, currentA, powerFactor, quality. Timestamps must include a timezone. Reuse the same batch ID to safely retry a completed import.</p>
       </article>
+      <article class="integration-panel gateway-panel">
+        <div class="integration-panel-head"><div><h3>Live IoT gateway connection</h3><p>Signed webhook ingestion · encrypted credentials · source health</p></div><span class="integration-chip">HMAC / SHA-256</span></div>
+        <div v-if="canImport" class="integration-form">
+          <label>Gateway source name<input v-model="gatewayName" maxlength="120" placeholder="Plant gateway / Edge controller"></label>
+          <label>Mapped active meter<select v-model="meterId"><option value="">Select local meter</option><option v-for="meter in meters.filter(item=>item.status==='active')" :key="meter._id" :value="meter._id">{{ meter.name }} · {{ meter.serialNumber }}</option></select></label>
+          <div class="integration-two"><label>External meter ID<input v-model="externalMeterId" maxlength="120" placeholder="gateway-meter-01"></label><label>Expected interval (minutes)<input v-model.number="expectedInterval" type="number" min="1" max="1440"></label></div>
+          <button class="integration-primary" @click="createGateway" :disabled="gatewayCreating || !gatewayName.trim() || !meterId || !externalMeterId.trim()">{{ gatewayCreating ? 'Provisioning…' : '＋ Provision gateway' }}</button>
+        </div>
+        <div v-else class="integration-empty">Your organization role is read-only for gateway provisioning.</div>
+        <div v-if="gatewaySecret" class="gateway-secret">
+          <div class="integration-panel-head"><div><h3>One-time signing secret</h3><p>Source ID: {{ gatewaySecretSourceId }} · store this securely before leaving</p></div><span class="integration-chip integration-warn">SHOW ONCE</span></div>
+          <textarea rows="2" readonly :value="gatewaySecret"></textarea>
+          <button class="integration-secondary" @click="copyGatewaySecret">Copy signing secret</button>
+          <p class="integration-note">The secret is encrypted at rest and is never returned by list endpoints. Rotating it invalidates the previous secret immediately.</p>
+        </div>
+        <div class="gateway-source-list">
+          <div v-if="!gateways.length" class="integration-empty">No gateway sources configured.</div>
+          <div v-for="gateway in gateways" :key="gateway._id" class="gateway-source-row">
+            <div class="gateway-source-title"><b>{{ gateway.name }}</b><span class="integration-chip" :class="gatewayHealthClass(gateway)">{{ gateway.health.replace('_',' ') }}</span></div>
+            <small>{{ gateway.meterMappings.map(mapping => mapping.externalMeterId + ' → ' + (typeof mapping.meter === 'object' ? mapping.meter.name : 'mapped meter')).join(' · ') }}</small>
+            <small>Expected every {{ gateway.expectedIntervalMinutes }} min · {{ gateway.receivedEvents }} received / {{ gateway.insertedEvents }} inserted / {{ gateway.duplicateEvents }} duplicate</small>
+            <small>Last success: {{ gateway.lastSuccessAt ? new Date(gateway.lastSuccessAt).toLocaleString() : 'Never received' }}</small>
+            <div v-if="canImport" class="integration-actions">
+              <button class="integration-secondary" @click="rotateGateway(gateway)" :disabled="gatewayActionId===gateway._id">{{ gatewayActionId===gateway._id ? 'Working…' : 'Rotate secret' }}</button>
+              <button class="integration-secondary" @click="toggleGateway(gateway)" :disabled="gatewayActionId===gateway._id">{{ gateway.status==='active' ? 'Disable source' : 'Enable source' }}</button>
+            </div>
+            <div class="gateway-endpoint"><small>Webhook endpoint</small><code>{{ gatewayWebhookUrl(gateway) }}</code></div>
+          </div>
+        </div>
+        <p class="integration-note">Health becomes stale after three expected reporting intervals. Inbound requests must include a fresh timestamp and an HMAC-SHA256 signature over timestamp + dot + exact raw JSON body.</p>
+      </article>
       <article class="integration-panel">
         <div class="integration-panel-head"><div><h3>Utility invoice reconciliation</h3><p>Actual invoice vs modeled estimate · same tariff and period</p></div><span class="integration-chip">COST CONTROL</span></div>
         <div v-if="canReconcile" class="integration-form">
