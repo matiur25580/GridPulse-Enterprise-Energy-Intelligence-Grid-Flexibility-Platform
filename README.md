@@ -15,24 +15,25 @@ GridPulse is a multi-tenant energy operations and intelligence platform for orga
 3. [Dashboard gallery](#dashboard-gallery)
 4. [Demo environment and browser screenshots](#demo-environment-and-browser-screenshots)
 5. [Capabilities](#capabilities)
-5. [User journeys](#user-journeys)
-6. [Architecture](#architecture)
-7. [Technology stack](#technology-stack)
-8. [Repository structure](#repository-structure)
-9. [Getting started](#getting-started)
-10. [Environment configuration](#environment-configuration)
-11. [Application workflows](#application-workflows)
-12. [API reference](#api-reference)
-13. [Security and tenant governance](#security-and-tenant-governance)
-14. [Data model and ingestion contracts](#data-model-and-ingestion-contracts)
-15. [Intelligence methodology and model boundaries](#intelligence-methodology-and-model-boundaries)
-16. [Automated alert operations](#automated-alert-operations)
-17. [Testing and continuous integration](#testing-and-continuous-integration)
-18. [Deployment checklist](#deployment-checklist)
-19. [Operational limitations](#operational-limitations)
-20. [Roadmap](#roadmap)
-21. [Contributing](#contributing)
-22. [License](#license)
+6. [User journeys](#user-journeys)
+7. [Architecture](#architecture)
+8. [Technology stack](#technology-stack)
+9. [Repository structure](#repository-structure)
+10. [Getting started](#getting-started)
+11. [Environment configuration](#environment-configuration)
+12. [Application workflows](#application-workflows)
+13. [API reference](#api-reference)
+14. [Security and tenant governance](#security-and-tenant-governance)
+15. [Data model and ingestion contracts](#data-model-and-ingestion-contracts)
+16. [Intelligence methodology and model boundaries](#intelligence-methodology-and-model-boundaries)
+17. [Automated alert operations](#automated-alert-operations)
+18. [Incident email notifications](#incident-email-notifications)
+19. [Testing and continuous integration](#testing-and-continuous-integration)
+20. [Deployment checklist](#deployment-checklist)
+21. [Operational limitations](#operational-limitations)
+22. [Roadmap](#roadmap)
+23. [Contributing](#contributing)
+24. [License](#license)
 
 ---
 
@@ -368,7 +369,8 @@ GridPulse follows a modular MEVN architecture with explicit boundaries between H
     gridpulse/
     ├── .github/
     │   └── workflows/
-    │       └── ci.yml
+    │       ├── ci.yml
+    │       └── demo-gallery.yml
     ├── client/
     │   └── src/
     │       ├── services/
@@ -383,7 +385,11 @@ GridPulse follows a modular MEVN architecture with explicit boundaries between H
     │       ├── IntegrationsView.vue
     │       ├── AlertsView.vue
     │       └── style.css
+    ├── scripts/
+    │   └── capture-demo-gallery.mjs
     ├── server/
+    │   ├── scripts/
+    │   │   └── seed-demo.js
     │   ├── src/
     │   │   ├── config/
     │   │   ├── controllers/
@@ -398,6 +404,7 @@ GridPulse follows a modular MEVN architecture with explicit boundaries between H
     │   │   └── server.js
     │   └── test/
     ├── docs/
+    │   ├── demo-environment.md
     │   └── screenshots/
     │       ├── 01-portfolio-overview.svg
     │       ├── 02-facility-and-meter-operations.svg
