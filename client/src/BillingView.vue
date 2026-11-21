@@ -22,8 +22,10 @@ const currency = ref('INR')
 const defaultRate = ref(8)
 const peakRate = ref(12)
 const peakHours = ref('18,19,20,21')
+const peakDays = ref('0,1,2,3,4,5,6')
 const offPeakRate = ref(5)
 const offPeakHours = ref('0,1,2,3,4,5')
+const offPeakDays = ref('0,1,2,3,4,5,6')
 const demandRate = ref(0)
 const fixedCharge = ref(0)
 const taxRate = ref(0)
@@ -70,18 +72,25 @@ function parseHours(value: string) {
   if (!value.trim()) return []
   return [...new Set(value.split(',').map((part) => Number(part.trim())).filter((hour) => Number.isInteger(hour) && hour >= 0 && hour <= 23))]
 }
+function parseDays(value: string) {
+  if (!value.trim()) return []
+  return [...new Set(value.split(',').map((part) => Number(part.trim())).filter((day) => Number.isInteger(day) && day >= 0 && day <= 6))]
+}
 async function saveTariff() {
   error.value = ''; success.value = ''
   const peak = parseHours(peakHours.value)
   const offPeak = parseHours(offPeakHours.value)
+  const peakWeekdays = parseDays(peakDays.value)
+  const offPeakWeekdays = parseDays(offPeakDays.value)
   if (!selectedFacilityId.value || !name.value.trim()) { error.value = 'Choose a facility and enter a tariff name.'; return }
   if (peak.some((hour) => offPeak.includes(hour))) { error.value = 'Peak and off-peak hours cannot overlap.'; return }
   if (peakHours.value.trim() && !peak.length || offPeakHours.value.trim() && !offPeak.length) { error.value = 'Enter valid comma-separated hours from 0 to 23.'; return }
+  if (peakDays.value.trim() && !peakWeekdays.length || offPeakDays.value.trim() && !offPeakWeekdays.length) { error.value = 'Enter valid comma-separated weekdays from 0 (Sunday) to 6 (Saturday).'; return }
   savingTariff.value = true
   try {
     const energyRates = [
-      ...(peak.length ? [{ label: 'Peak', ratePerKwh: peakRate.value, hours: peak, daysOfWeek: [0, 1, 2, 3, 4, 5, 6] }] : []),
-      ...(offPeak.length ? [{ label: 'Off-peak', ratePerKwh: offPeakRate.value, hours: offPeak, daysOfWeek: [0, 1, 2, 3, 4, 5, 6] }] : []),
+      ...(peak.length ? [{ label: 'Peak', ratePerKwh: peakRate.value, hours: peak, daysOfWeek: peakWeekdays }] : []),
+      ...(offPeak.length ? [{ label: 'Off-peak', ratePerKwh: offPeakRate.value, hours: offPeak, daysOfWeek: offPeakWeekdays }] : []),
     ]
     const created = await billingApi.createTariff(props.organizationId, {
       facilityId: selectedFacilityId.value, name: name.value.trim(), currency: currency.value,
@@ -151,7 +160,7 @@ function exportCsv(bill: EnergyBill) {
     <article class="billing-panel">
       <div class="billing-toolbar">
         <label>Facility<select v-model="selectedFacilityId"><option value="">Select facility</option><option v-for="facility in facilities" :key="facility._id" :value="facility._id">{{facility.name}} · {{facility.code}}</option></select></label>
-        <label>Tariff plan<select v-model="selectedTariffId"><option value="">Select tariff</option><option v-for="tariff in tariffs" :key="tariff._id" :value="tariff._id">{{tariff.name}} · {{tariff.currency}} · {{tariff.status}}</option></select></label>
+        <label>Tariff plan<select v-model="selectedTariffId"><option value="">Select tariff</option><option v-for="tariff in tariffs" :key="tariff._id" :value="tariff._id">{{tariff.name}} · {{tariff.currency}} · from {{tariff.effectiveFrom.slice(0,10)}}</option></select></label>
         <button v-if="canManage" type="button" @click="showTariffForm = !showTariffForm">{{showTariffForm ? 'Close tariff form' : '+ Create tariff version'}}</button>
       </div>
       <div v-if="showTariffForm && canManage" class="billing-tariff-form">
@@ -162,8 +171,10 @@ function exportCsv(bill: EnergyBill) {
           <label>Default rate / kWh<input v-model.number="defaultRate" type="number" min="0" step="0.001"></label>
           <label>Peak rate / kWh<input v-model.number="peakRate" type="number" min="0" step="0.001"></label>
           <label>Peak hours (0–23)<input v-model="peakHours" placeholder="18,19,20,21"></label>
+          <label>Peak weekdays (0–6)<input v-model="peakDays" placeholder="1,2,3,4,5"></label>
           <label>Off-peak rate / kWh<input v-model.number="offPeakRate" type="number" min="0" step="0.001"></label>
           <label>Off-peak hours (0–23)<input v-model="offPeakHours" placeholder="0,1,2,3,4,5"></label>
+          <label>Off-peak weekdays (0–6)<input v-model="offPeakDays" placeholder="0,1,2,3,4,5,6"></label>
           <label>Demand charge / kW<input v-model.number="demandRate" type="number" min="0" step="0.01"></label>
           <label>Fixed service charge<input v-model.number="fixedCharge" type="number" min="0" step="0.01"></label>
           <label>Tax / surcharge (%)<input v-model.number="taxRate" type="number" min="0" max="100" step="0.01"></label>
