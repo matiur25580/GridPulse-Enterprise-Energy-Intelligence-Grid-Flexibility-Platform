@@ -1,6 +1,6 @@
 import test from 'node:test'
 import assert from 'node:assert/strict'
-import { reportQuerySchema } from '../src/schemas/report.schema.js'
+import { reportParamsSchema, reportQuerySchema } from '../src/schemas/report.schema.js'
 
 test('accepts a bounded report period and defaults emissions factor', () => {
   const result = reportQuerySchema.safeParse({ from: '2026-01-01T00:00:00Z', to: '2026-01-31T23:59:59Z' })
@@ -12,4 +12,9 @@ test('rejects reversed, oversized, and invalid emissions inputs', () => {
   assert.equal(reportQuerySchema.safeParse({ from: '2026-02-01', to: '2026-01-01' }).success, false)
   assert.equal(reportQuerySchema.safeParse({ from: '2025-01-01', to: '2026-02-01' }).success, false)
   assert.equal(reportQuerySchema.safeParse({ from: '2026-01-01', to: '2026-01-02', gridEmissionFactorKgPerKwh: 9 }).success, false)
+})
+
+test('accepts a valid MongoDB organization id containing numeric hex characters', () => {
+  assert.equal(reportParamsSchema.safeParse({ organizationId: '6b01bdca18dbba43199b4779' }).success, true)
+  assert.equal(reportParamsSchema.safeParse({ organizationId: 'not-an-object-id' }).success, false)
 })
