@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto'
 import { AlertRule } from '../models/alert-rule.model.js'
+import { Organization } from '../models/organization.model.js'
 import { AlertEvaluationLease } from '../models/alert-evaluation-lease.model.js'
 import { AlertEvaluationRun } from '../models/alert-evaluation-run.model.js'
 import { evaluateEnergyAlerts } from '../services/alerts.service.js'
@@ -72,8 +73,9 @@ async function executeScheduledAlertEvaluation() {
   }, Math.max(20_000, Math.floor(env.ALERT_EVALUATION_LEASE_SECONDS * 1000 / 3)))
   heartbeat.unref?.()
   try {
-    const organizations = await AlertRule.distinct('organization', { status: 'active' })
-    for (const organizationId of organizations) await evaluateOrganization(organizationId)
+    const organizationIds = await AlertRule.distinct('organization')
+    const organizations = await Organization.find({ _id: { $in: organizationIds }, status: 'active' }).select('_id').lean()
+    for (const organization of organizations) await evaluateOrganization(organization._id)
     return { skipped: false, organizations: organizations.length }
   } finally {
     clearInterval(heartbeat)
