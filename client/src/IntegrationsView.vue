@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { billingApi, integrationsApi, type BillingFacility, type MeterImportBatch, type TariffPlan, type UtilityInvoice } from './services/api'
+import { apiRequest, billingApi, integrationsApi, type BillingFacility, type MeterImportBatch, type TariffPlan, type UtilityInvoice } from './services/api'
 
 const props = defineProps<{ organizationId: string; role: string }>()
 type MeterOption = { _id: string; name: string; serialNumber: string; status: string; facility: string | { _id: string } }
@@ -45,7 +45,7 @@ async function loadWorkspace() {
   try {
     const [facilityData, meterData, batchData, invoiceData] = await Promise.all([
       billingApi.facilities(props.organizationId),
-      import('./services/api').then(({ apiRequest }) => apiRequest<MeterOption[]>(`/organizations/${encodeURIComponent(props.organizationId)}/meters`)),
+      apiRequest<MeterOption[]>(`/organizations/${encodeURIComponent(props.organizationId)}/meters`),
       integrationsApi.imports(props.organizationId),
       integrationsApi.invoices(props.organizationId),
     ])
