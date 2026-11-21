@@ -10,7 +10,7 @@ import { exceedsEnergyThreshold, isAlertStale } from '../utils/alert-conditions.
 async function assertRuleTarget({ organizationId, targetId, targetType }) {
   const Model = targetType === 'facility' ? Facility : targetType === 'meter' ? Meter : GatewaySource
   const target = await Model.findOne({ _id: targetId, organization: organizationId }).select('_id status').lean()
-  if (!target || target.status === 'inactive' || target.status === 'disabled') {
+  if (!target || (targetType === 'facility' && target.status !== 'active') || (targetType === 'meter' && target.status !== 'active') || (targetType === 'gateway' && target.status !== 'active')) {
     throw new AppError('Alert target must exist and be active in this organization.', 422, 'ALERT_TARGET_INVALID')
   }
 }
