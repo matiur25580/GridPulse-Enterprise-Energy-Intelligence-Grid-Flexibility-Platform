@@ -1,9 +1,10 @@
 import crypto from 'node:crypto'
 import jwt from 'jsonwebtoken'
-import { env } from '../config/env.js'
 import { RefreshSession } from '../models/refresh-session.model.js'
+import { env } from '../config/env.js'
 
 const hashToken = (token) => crypto.createHash('sha256').update(token).digest('hex')
+const newOpaqueToken = () => crypto.randomBytes(48).toString('base64url')
 
 export function createAccessToken(user) {
   return jwt.sign({ email: user.email }, env.JWT_ACCESS_SECRET, {
@@ -15,13 +16,11 @@ export function createAccessToken(user) {
 }
 
 export async function createRefreshSession(user, request) {
-  const token = crypto.randomBytes(48).toString('base64url')
-  const tokenHash = hashToken(token)
-  const expiresAt = new Date(Date.now() + env.REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000)
+  const token = newOpaqueToken()
   await RefreshSession.create({
     user: user._id,
-    tokenHash,
-    expiresAt,
+    tokenHash: hashToken(token),
+    expiresAt: new Date(Date.now() + env.REFRESH_TOKEN_TTL_DAYS * 86400000),
     userAgent: request.get('user-agent')?.slice(0, 500),
     ipAddress: request.ip,
   })
@@ -30,19 +29,21 @@ export async function createRefreshSession(user, request) {
 
 export async function rotateRefreshSession(token, request) {
   if (!token) return null
-  const tokenHash = hashToken(token)
-  const session = await RefreshSession.findOne({ tokenHash, revokedAt: null, expiresAt: { $gt: new Date() } })
+  const nextToken = newOpaqueToken()
+  const nextHash = hashToken(nextToken)
+  const now = new Date()
+  // Atomic conditional revocation prevents two concurrent refreshes from reusing one session.
+  const session = await RefreshSession.findOneAndUpdate(
+    { tokenHash: hashToken(token), revokedAt: null, expiresAt: { $gt: now } },
+    { $set: { revokedAt: now, replacedByTokenHash: nextHash } },
+    { new: true },
+  )
   if (!session) return null
 
-  session.revokedAt = new Date()
-  const nextToken = crypto.randomBytes(48).toString('base64url')
-  const nextHash = hashToken(nextToken)
-  session.replacedByTokenHash = nextHash
-  await session.save()
   await RefreshSession.create({
     user: session.user,
     tokenHash: nextHash,
-    expiresAt: new Date(Date.now() + env.REFRESH_TOKEN_TTL_DAYS * 24 * 60 * 60 * 1000),
+    expiresAt: new Date(Date.now() + env.REFRESH_TOKEN_TTL_DAYS * 86400000),
     userAgent: request.get('user-agent')?.slice(0, 500),
     ipAddress: request.ip,
   })
@@ -50,6 +51,10 @@ export async function rotateRefreshSession(token, request) {
 }
 
 export async function revokeRefreshSession(token) {
-  if (!token) return
-  await RefreshSession.updateOne({ tokenHash: hashToken(token), revokedAt: null }, { $set: { revokedAt: new Date() } })
+  if (token) {
+    await RefreshSession.updateOne(
+      { tokenHash: hashToken(token), revokedAt: null },
+      { $set: { revokedAt: new Date() } },
+    )
+  }
 }
