@@ -280,3 +280,32 @@ export const integrationsApi = {
   invoices: (organizationId: string, facilityId?: string) =>
     apiRequest<UtilityInvoice[]>(`/organizations/${encodeURIComponent(organizationId)}/integrations/utility-invoices${facilityId ? '?facilityId=' + encodeURIComponent(facilityId) : ''}`),
 }
+
+
+export interface GatewayMeterMapping { externalMeterId: string; meter: string | { _id: string; name: string; serialNumber: string; status: string } }
+export interface GatewaySource {
+  _id: string
+  name: string
+  provider: 'generic_hmac'
+  status: 'active' | 'disabled'
+  expectedIntervalMinutes: number
+  meterMappings: GatewayMeterMapping[]
+  health: 'healthy' | 'stale' | 'awaiting_data' | 'disabled'
+  lastSuccessAt: string | null
+  lastEventAt: string | null
+  minutesSinceLastSuccess: number | null
+  receivedEvents: number
+  insertedEvents: number
+  duplicateEvents: number
+  createdAt: string
+}
+export interface GatewayProvisioning { source: GatewaySource; signingSecret: string }
+export const gatewayApi = {
+  list: (organizationId: string) => apiRequest<GatewaySource[]>(`/organizations/${encodeURIComponent(organizationId)}/integrations/gateways`),
+  create: (organizationId: string, input: { name: string; expectedIntervalMinutes: number; meterMappings: Array<{ externalMeterId: string; meterId: string }> }) =>
+    apiRequest<GatewayProvisioning>(`/organizations/${encodeURIComponent(organizationId)}/integrations/gateways`, { method: 'POST', body: JSON.stringify(input) }),
+  rotateSecret: (organizationId: string, sourceId: string) =>
+    apiRequest<GatewayProvisioning>(`/organizations/${encodeURIComponent(organizationId)}/integrations/gateways/${encodeURIComponent(sourceId)}/rotate-secret`, { method: 'POST', body: '{}' }),
+  setStatus: (organizationId: string, sourceId: string, status: 'active' | 'disabled') =>
+    apiRequest<GatewaySource>(`/organizations/${encodeURIComponent(organizationId)}/integrations/gateways/${encodeURIComponent(sourceId)}/status`, { method: 'PATCH', body: JSON.stringify({ status }) }),
+}
