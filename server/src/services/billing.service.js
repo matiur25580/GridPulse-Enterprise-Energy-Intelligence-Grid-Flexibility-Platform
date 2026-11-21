@@ -59,7 +59,7 @@ export function calculateCosts(rows, tariff) {
   let potentialShiftSavings = 0
   const configuredRates = [tariff.defaultRatePerKwh, ...tariff.energyRates.map((item) => item.ratePerKwh)]
   const lowestRate = Math.min(...configuredRates)
-    for (const row of rows) {
+  for (const row of rows) {
     const { rate } = rateFor(tariff, row._id.hour, row._id.dayOfWeek)
     const charge = row.energyKwh * rate
     energyKwh += row.energyKwh
