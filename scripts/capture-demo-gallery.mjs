@@ -25,6 +25,7 @@ const captures = [
 
 await mkdir(outputDirectory, { recursive: true })
 const browser = await chromium.launch({ headless: true })
+const reportResponses = []
 try {
   const page = await browser.newPage({
     viewport: { width: 1440, height: 1000 },
@@ -32,6 +33,13 @@ try {
     colorScheme: 'dark',
   })
   page.setDefaultTimeout(30000)
+  page.on('response', async (response) => {
+    if (response.url().includes('/reports/energy')) {
+      const body = await response.text().catch(() => '')
+      reportResponses.push({ status: response.status(), body })
+      process.stdout.write('REPORT_RESPONSE ' + response.status() + ' ' + body.slice(0, 1200) + '\\n')
+    }
+  })
   await page.goto(baseUrl, { waitUntil: 'networkidle' })
   await page.getByLabel('Work email').fill(email)
   await page.getByLabel('Password').fill(password)
@@ -48,6 +56,16 @@ try {
   await page.getByRole('button', { name: /Generate report/ }).click()
   await page.getByRole('button', { name: /Calculate estimate/ }).click()
   await page.getByRole('button', { name: /Run evaluation/ }).click()
+  await Promise.race([
+    page.locator('.reporting-result-head').waitFor({ state: 'visible' }),
+    page.locator('.reporting-error').waitFor({ state: 'visible' }),
+  ])
+  if (await page.locator('.reporting-error').isVisible()) {
+    throw new Error('Demo report generation failed: ' + (reportResponses.at(-1)?.body || await page.locator('.reporting-error').innerText()))
+  }
+  if (!(await page.locator('.reporting-result-head').isVisible())) {
+    throw new Error('Demo report did not render successfully.')
+  }
   await page.waitForTimeout(1200)
 
   for (const [fileName, selector] of captures) {
@@ -55,6 +73,11 @@ try {
     await section.waitFor({ state: 'visible' })
     await section.scrollIntoViewIfNeeded()
     await page.waitForTimeout(250)
+    if (fileName === '01-portfolio-overview.png') {
+      await page.screenshot({ path: outputDirectory + '/' + fileName, fullPage: false, animations: 'disabled', caret: 'hide' })
+      process.stdout.write('Captured ' + fileName + '\\n')
+      continue
+    }
     await section.screenshot({
       path: outputDirectory + '/' + fileName,
       animations: 'disabled',
