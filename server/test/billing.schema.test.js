@@ -42,5 +42,6 @@ test('accepts date-bounded estimates and rejects reversed or oversized periods',
   assert.equal(estimateBillSchema.safeParse(base).success, true)
   assert.equal(estimateBillSchema.safeParse({ ...base, from: '2026-02-01' }).success, false)
   assert.equal(estimateBillSchema.safeParse({ ...base, to: '2027-02-02' }).success, false)
+  assert.equal(estimateBillSchema.safeParse({ ...base, to: '2027-01-02' }).success, false)
   assert.equal(estimateBillSchema.safeParse({ ...base, from: '2026-02-30' }).success, false)
 })
