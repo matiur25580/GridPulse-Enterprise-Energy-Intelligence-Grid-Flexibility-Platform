@@ -98,6 +98,10 @@ All endpoints are prefixed with `/api/v1`.
 | POST | `/organizations/:organizationId/billing/bills/estimate` | Owner/admin/operator/analyst | Calculate and save a tenant-scoped bill estimate |
 | GET | `/organizations/:organizationId/billing/bills` | Organization member | List saved bill estimates |
 | GET | `/organizations/:organizationId/billing/bills/:billId` | Organization member | Retrieve a saved estimate snapshot |
+| POST | `/organizations/:organizationId/meters/:meterId/imports/csv` | Owner/admin/operator | Import up to 1,000 timezone-aware meter readings from a CSV batch |
+| GET | `/organizations/:organizationId/integrations/meter-imports` | Organization member | List import batches and ingestion outcomes |
+| POST | `/organizations/:organizationId/integrations/utility-invoices/reconcile` | Owner/admin/operator/analyst | Record an actual utility invoice and compare it with a fresh tariff-based estimate |
+| GET | `/organizations/:organizationId/integrations/utility-invoices` | Organization member | List utility invoice reconciliation records |
 
 ### Facility example
 
@@ -225,11 +229,54 @@ Endpoints:
 
 The calculator is an operational planning estimate, not a utility-issued invoice, tax invoice, payment collection system, settlement statement, or statutory accounting ledger. It does not yet model utility-specific slab tiers, power-factor penalties, contracted-demand ratchets, time-of-use holidays, meter multipliers, export credits, arrears, late fees, or jurisdiction-specific tax rules. Rates and tax percentages must be entered by an authorized organization user and verified against the applicable utility contract.
 
+
+### Meter data pipelines and utility invoice reconciliation
+
+The **Integrations & Reconciliation** workspace adds controlled batch ingestion and actual-versus-modeled invoice checks.
+
+**CSV meter imports**
+- Upload CSV against an active meter belonging to the selected organization. Required columns are `externalId`, `recordedAt`, and `energyKwh`; optional columns are `demandKw`, `voltageV`, `currentA`, `powerFactor`, and `quality`.
+- Timestamps must be ISO-compatible and include `Z` or an explicit UTC offset. Energy and electrical measurements are validated; unsupported columns, malformed quoting, duplicate event IDs in a file, and oversized batches are rejected.
+- A batch accepts at most 1,000 readings and 900 KB of CSV content. Imported readings are tagged `source: import`; the existing organization/meter/event unique key makes individual readings idempotent.
+- Each import has a caller-supplied batch ID, SHA-256 content fingerprint, status, file name, received/inserted/duplicate counts, timestamps, and failure summary. Replaying a completed batch with identical content returns the original result. Reusing its ID with different content is rejected. Failed batches can be retried with the same ID and unchanged content; already inserted readings are safely recognized as duplicates.
+- The import history is visible to organization members. Only owner/admin/operator roles can ingest CSV.
+
+CSV example:
+
+```csv
+externalId,recordedAt,energyKwh,demandKw,powerFactor,quality
+gateway-01:reading-0001,2026-11-01T10:00:00Z,124.75,48.2,0.96,valid
+gateway-01:reading-0002,2026-11-01T11:00:00+05:30,121.40,46.8,0.95,valid
+```
+
+Example request body for the CSV endpoint:
+
+```json
+{
+  "externalBatchId": "gateway-01-batch-2026-11-01",
+  "fileName": "plant-meter-readings.csv",
+  "csv": "externalId,recordedAt,energyKwh\\ngateway-01:reading-0001,2026-11-01T10:00:00Z,124.75"
+}
+```
+
+**Utility invoice reconciliation**
+- An authorized user records supplier, invoice number, facility, billing dates, invoice currency, actual billed kWh, actual total, optional measured peak demand, and an acceptable amount-variance tolerance.
+- GridPulse generates a new bill estimate using the selected facility tariff and eligible telemetry for the exact same period. Invoice currency must match the tariff currency.
+- The saved reconciliation reports actual and estimated amounts, absolute and percentage amount variance, actual and estimated energy, energy variance, and demand variance when both demand values are available.
+- A result is marked `within_tolerance` only when a non-zero estimate permits a percentage comparison and the absolute amount variance is within the configured threshold. Otherwise it is marked `discrepancy`; unavailable percentage/demand comparisons are explicitly explained.
+- Invoice numbers are unique within a facility and organization. Reconciliation history is retained and can be reviewed by organization members. Owner/admin/operator/analyst roles can submit reconciliations.
+
+This is a manual invoice-data entry and reconciliation workflow, not a direct utility-provider API integration, automated scheduled meter polling, OCR invoice extraction, payment system, or accounting ledger. CSV ingestion is user-initiated; the audit records provide the foundation for later gateway adapters, scheduled synchronization, and exception notifications. Imported meter data is not silently treated as verified utility data. Review source records and supplier invoice details before acting on discrepancies.
+
+### Continuous integration
+
+GitHub Actions runs the backend Node.js test suite and Vue/TypeScript production build on pushes and pull requests targeting `main`. The workflow installs workspace dependencies with Node.js 22. A successful workflow is required before treating a change as build-verified.
+
 ### Tenant and role controls
 
 Every facility, meter, and reading query is scoped to the organization resolved from the authenticated user's active membership. A meter can only be registered against a facility in that same organization. The organization ID in the URL is a lookup context, never proof of access.
 
-Roles available: `owner`, `admin`, `operator`, `analyst`, and `viewer`. All members can read; only owner/admin/operator can create facilities, register meters, ingest readings, or configure tariff versions. Owner/admin/operator/analyst can generate bill estimates; viewer is read-only.
+Roles available: `owner`, `admin`, `operator`, `analyst`, and `viewer`. All members can read; only owner/admin/operator can create facilities, register meters, ingest readings, import CSV batches, or configure tariff versions. Owner/admin/operator/analyst can generate bill estimates and reconcile utility invoices; viewer is read-only.
 
 ## Architecture principles
 
@@ -251,7 +298,8 @@ Roles available: `owner`, `admin`, `operator`, `analyst`, and `viewer`. All memb
 7. Renewable energy and demand-response advisory simulation — initial implementation complete; metered exports, settlement, and production integration remain.
 8. Enterprise energy reporting with CSV and print-to-PDF exports — initial implementation complete; formal emissions inventory, audit controls, and compliance workflows remain.
 9. Facility-specific tariff versioning, time-of-use cost calculation, demand charges, saved bill estimates, period comparisons, and CSV exports — initial implementation complete; utility integrations, invoice settlement, and jurisdiction-specific tariff rules remain.
-10. Production hardening, observability, and integration testing.
+10. Meter CSV batch ingestion with content-fingerprinted idempotency, import audit history, and actual utility invoice reconciliation — initial implementation complete; direct provider connectors, scheduled polling, OCR, and automated alerts remain.
+11. Production hardening, observability, and integration testing.
 
 ## Security
 
