@@ -21,3 +21,8 @@ test('rejects malformed quoting and unsupported columns', () => {
   assert.throws(() => parseMeterReadingsCsv('externalId,recordedAt,energyKwh\n"a,2026-11-01,2'), { code: 'CSV_INVALID_QUOTING' })
   assert.throws(() => parseMeterReadingsCsv('externalId,recordedAt,energyKwh,secret\na,2026-11-01,2,x'), { code: 'CSV_UNKNOWN_COLUMNS' })
 })
+
+test('requires explicit timezone offsets and non-empty energy values', () => {
+  assert.throws(() => parseMeterReadingsCsv('externalId,recordedAt,energyKwh\na,2026-11-01T10:00:00,1'), { code: 'CSV_INVALID_READING' })
+  assert.throws(() => parseMeterReadingsCsv('externalId,recordedAt,energyKwh\na,2026-11-01T10:00:00Z,'), { code: 'CSV_INVALID_READING' })
+})
