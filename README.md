@@ -181,7 +181,7 @@ Roles available: `owner`, `admin`, `operator`, `analyst`, and `viewer`. All memb
 2. Authentication, organizations, memberships, tenant-aware authorization — initial implementation complete; integration hardening remains.
 3. Facilities, meters, and energy-reading ingestion — APIs, models, and authenticated management UI implemented; database-backed integration tests remain.
 4. Portfolio analytics endpoint and authenticated live-data dashboard — initial implementation complete; integration tests remain.
-5. Explainable baseline forecasting and anomaly detection API — initial implementation complete; UI integration, backtesting, and model evaluation remain.
+5. Explainable baseline forecasting and anomaly detection API plus authenticated intelligence dashboard — initial implementation complete; backtesting and model evaluation remain.
 6. Optimization scenarios and demand-response simulation.
 7. Renewable assets, billing, reporting, audit, and operational hardening.
 
