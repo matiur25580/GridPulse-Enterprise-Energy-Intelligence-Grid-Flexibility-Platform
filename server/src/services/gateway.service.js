@@ -70,7 +70,7 @@ export async function ingestGatewayEvents({ source, events }) {
     return { updateOne: {
       filter: { organization: source.organization, meter: meterId, externalId: event.eventId },
       update: { $setOnInsert: {
-        organization: source.organization, facility: source.meterMappings.find((item) => item.externalMeterId === event.externalMeterId).facility ?? undefined,
+        organization: source.organization, facility: undefined,
         meter: meterId, externalId: event.eventId, recordedAt: new Date(event.recordedAt),
         energyKwh: event.energyKwh, demandKw: event.demandKw, voltageV: event.voltageV,
         currentA: event.currentA, powerFactor: event.powerFactor, quality: event.quality,
@@ -90,7 +90,8 @@ export async function ingestGatewayEvents({ source, events }) {
   const duplicate = events.length - inserted
   const latestEvent = events.reduce((latest, event) => Math.max(latest, new Date(event.recordedAt).getTime()), 0)
   await GatewaySource.updateOne({ _id: source._id, organization: source.organization }, {
-    $set: { lastReceivedAt: new Date(), lastSuccessAt: new Date(), lastEventAt: new Date(latestEvent) },
+    $set: { lastReceivedAt: new Date(), lastSuccessAt: new Date() },
+    $max: { lastEventAt: new Date(latestEvent) },
     $inc: { receivedEvents: events.length, insertedEvents: inserted, duplicateEvents: duplicate },
   })
   return { received: events.length, inserted, duplicates: duplicate, acceptedAt: new Date().toISOString() }
