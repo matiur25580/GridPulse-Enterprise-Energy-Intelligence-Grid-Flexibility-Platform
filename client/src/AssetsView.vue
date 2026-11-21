@@ -19,6 +19,8 @@ const meterForm = ref({ facilityId: '', name: '', serialNumber: '', meterType: '
 const readingForm = ref({ recordedAt: new Date().toISOString().slice(0, 16), energyKwh: '', demandKw: '', powerFactor: '', source: 'manual', quality: 'valid' })
 
 const selectedMeterName = computed(() => meters.value.find((m) => m._id === selectedMeter.value)?.name ?? '')
+const formatReadingDate = (value: string) => new Date(value).toLocaleString()
+const formatEnergyKwh = (value: number) => Number(value).toLocaleString()
 const activeFacilities = computed(() => facilities.value.filter((facility) => facility.status === 'active'))
 const activeMeters = computed(() => meters.value.filter((meter) => meter.status === 'active'))
 const canRegisterMeter = computed(() => !saving.value && activeFacilities.value.some((facility) => facility._id === meterForm.value.facilityId))
@@ -141,7 +143,11 @@ onMounted(refresh)
       <article class="asset-panel"><div class="asset-panel-title"><h3>Recent readings</h3><span>LAST 20 EVENTS</span></div>
         <label class="asset-filter">Select meter<select v-model="selectedMeter"><option value="" disabled>Select a meter</option><option v-for="m in meters" :key="m._id" :value="m._id">{{m.name}} · {{m.serialNumber}}</option></select></label>
         <div v-if="!readings.length" class="asset-empty">Choose a meter with telemetry to inspect its recent energy readings.</div>
-        <div v-for="r in readings" :key="r._id" class="reading-item"><span class="reading-kwh">{{Number(r.energyKwh).toLocaleString()}} <small>kWh</small></span><span class="facility-copy"><b>{{new Date(r.recordedAt).toLocaleString()}</b><small>{{r.externalId}} · {{r.source}}</small></span><span class="asset-status" :class="r.quality">{{r.quality}}</span></div>
+        <div v-for="reading in readings" :key="reading._id" class="reading-item">
+          <span class="reading-kwh">{{ formatEnergyKwh(reading.energyKwh) }} <small>kWh</small></span>
+          <span class="facility-copy"><b>{{ formatReadingDate(reading.recordedAt) }}</b><small>{{ reading.externalId }} · {{ reading.source }}</small></span>
+          <span class="asset-status" :class="reading.quality">{{ reading.quality }}</span>
+        </div>
       </article>
       <article v-if="canWrite" class="asset-panel"><div class="asset-panel-title"><h3>Ingest a reading</h3><span>MANUAL ENTRY</span></div>
         <form class="asset-form" @submit.prevent="submitReading">
