@@ -1,4 +1,3 @@
-import mongoose from 'mongoose'
 import { Facility } from '../models/facility.model.js'
 import { Meter } from '../models/meter.model.js'
 import { EnergyReading } from '../models/energy-reading.model.js'
@@ -28,7 +27,10 @@ export const listFacilities = asyncHandler(async (request, response) => {
 })
 
 export const getFacility = asyncHandler(async (request, response) => {
-  const facility = await Facility.findOne({ _id: request.params.facilityId, organization: orgId(request) }).lean()
+  const facility = await Facility.findOne({
+    _id: request.params.facilityId,
+    organization: orgId(request),
+  }).lean()
   if (!facility) throw new AppError('Facility not found.', 404, 'FACILITY_NOT_FOUND')
   response.json({ data: facility })
 })
@@ -57,10 +59,7 @@ export const createMeter = asyncHandler(async (request, response) => {
 
 export const listMeters = asyncHandler(async (request, response) => {
   const filter = { organization: orgId(request) }
-  if (request.query.facilityId) {
-    if (!mongoose.isValidObjectId(request.query.facilityId)) throw new AppError('facilityId is invalid.', 400, 'INVALID_FACILITY_ID')
-    filter.facility = request.query.facilityId
-  }
+  if (request.validatedQuery.facilityId) filter.facility = request.validatedQuery.facilityId
   const meters = await Meter.find(filter).populate('facility', 'name code').sort({ name: 1 }).lean()
   response.json({ data: meters })
 })
@@ -110,12 +109,12 @@ export const listReadings = asyncHandler(async (request, response) => {
   const filter = { organization: orgId(request), meter: request.params.meterId }
   const meterExists = await Meter.exists({ _id: request.params.meterId, organization: orgId(request) })
   if (!meterExists) throw new AppError('Meter not found.', 404, 'METER_NOT_FOUND')
-  if (request.query.from || request.query.to) {
+  const { from, to, page, limit } = request.validatedQuery
+  if (from || to) {
     filter.recordedAt = {}
-    if (request.query.from) filter.recordedAt.$gte = request.query.from
-    if (request.query.to) filter.recordedAt.$lte = request.query.to
+    if (from) filter.recordedAt.$gte = from
+    if (to) filter.recordedAt.$lte = to
   }
-  const { page, limit } = request.query
   const [readings, total] = await Promise.all([
     EnergyReading.find(filter).sort({ recordedAt: -1, _id: -1 }).skip((page - 1) * limit).limit(limit).lean(),
     EnergyReading.countDocuments(filter),
