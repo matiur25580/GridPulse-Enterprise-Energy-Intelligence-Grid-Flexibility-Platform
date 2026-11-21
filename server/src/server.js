@@ -1,36 +1,23 @@
-import 'dotenv/config'
-import cors from 'cors'
-import express from 'express'
-import helmet from 'helmet'
+import { app } from './app.js'
+import { env } from './config/env.js'
+import { connectDatabase, disconnectDatabase } from './config/database.js'
 
-const app = express()
-const port = Number(process.env.API_PORT ?? 4000)
-const host = process.env.API_HOST ?? '0.0.0.0'
-const allowedOrigin = process.env.CLIENT_ORIGIN ?? 'http://localhost:5173'
-
-app.disable('x-powered-by')
-app.use(helmet())
-app.use(cors({ origin: allowedOrigin }))
-app.use(express.json({ limit: '1mb' }))
-
-app.get('/api/v1/health', (_request, response) => {
-  response.status(200).json({
-    status: 'ok',
-    service: 'gridpulse-api',
-    environment: process.env.NODE_ENV ?? 'development',
-    timestamp: new Date().toISOString(),
+let server
+async function start() {
+  await connectDatabase()
+  server = app.listen(env.API_PORT, env.API_HOST, () => {
+    console.info(`GridPulse API listening on http://${env.API_HOST}:${env.API_PORT}`)
   })
-})
-
-app.use((_request, response) => {
-  response.status(404).json({
-    error: {
-      code: 'NOT_FOUND',
-      message: 'The requested API route does not exist.',
-    },
-  })
-})
-
-app.listen(port, host, () => {
-  console.info(`GridPulse API listening on http://${host}:${port}`)
+}
+async function shutdown(signal) {
+  console.info(`${signal} received; shutting down GridPulse API`)
+  if (server) await new Promise((resolve) => server.close(resolve))
+  await disconnectDatabase()
+  process.exit(0)
+}
+process.on('SIGINT', () => shutdown('SIGINT'))
+process.on('SIGTERM', () => shutdown('SIGTERM'))
+start().catch((error) => {
+  console.error('GridPulse API failed to start:', error)
+  process.exit(1)
 })
