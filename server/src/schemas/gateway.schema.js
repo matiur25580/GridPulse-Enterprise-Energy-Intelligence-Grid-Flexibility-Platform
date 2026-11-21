@@ -39,5 +39,8 @@ export const gatewayEventsSchema = z.object({
     const key = event.externalMeterId + ':' + event.eventId
     if (keys.has(key)) context.addIssue({ code: 'custom', path: ['events', index, 'eventId'], message: 'Duplicate event ID for this external meter in one request.' })
     keys.add(key)
+    if (new Date(event.recordedAt).getTime() > Date.now() + 5 * 60 * 1000) {
+      context.addIssue({ code: 'custom', path: ['events', index, 'recordedAt'], message: 'Gateway readings cannot be more than five minutes in the future.' })
+    }
   })
 })

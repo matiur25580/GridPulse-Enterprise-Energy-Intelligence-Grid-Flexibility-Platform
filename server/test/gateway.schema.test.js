@@ -25,3 +25,11 @@ test('rejects duplicate event identifiers within one external meter batch', () =
   assert.equal(gatewayEventsSchema.safeParse({ events: [event, event] }).success, false)
   assert.equal(gatewayEventsSchema.safeParse({ events: [event, { ...event, externalMeterId: 'meter-b' }] }).success, true)
 })
+
+test('rejects readings timestamped more than five minutes in the future', () => {
+  const future = new Date(Date.now() + 6 * 60 * 1000).toISOString()
+  const recent = new Date(Date.now() + 4 * 60 * 1000).toISOString()
+  const base = { eventId: 'evt-future', externalMeterId: 'gw-meter-1', energyKwh: 1 }
+  assert.equal(gatewayEventsSchema.safeParse({ events: [{ ...base, recordedAt: future }] }).success, false)
+  assert.equal(gatewayEventsSchema.safeParse({ events: [{ ...base, recordedAt: recent }] }).success, true)
+})
