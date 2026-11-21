@@ -51,6 +51,8 @@ export const runGridFlexibilityScenario = asyncHandler(async (request, response)
   })
   const result = evaluateGridFlexibility(profile, { ...scenario, loadSource })
   const observedDays = Math.max(0, ...rows.map((row) => row.observedDays))
+  const observedLoadDays = Math.max(0, ...rows.filter((row) => row._id.meterType === loadSource).map((row) => row.observedDays))
+  const observedSolarDays = Math.max(0, ...rows.filter((row) => row._id.meterType === 'solar').map((row) => row.observedDays))
   response.json({ data: {
     organizationId: String(request.organization._id),
     generatedAt: now.toISOString(),
@@ -60,6 +62,8 @@ export const runGridFlexibilityScenario = asyncHandler(async (request, response)
       hoursWithLoad: profile.filter((item) => item.observedLoad).length,
       hoursWithSolar: profile.filter((item) => item.observedSolar).length,
       observedDays,
+      observedLoadDays,
+      observedSolarDays,
       includedQuality: 'valid and estimated; flagged readings excluded',
     },
     ...result,
