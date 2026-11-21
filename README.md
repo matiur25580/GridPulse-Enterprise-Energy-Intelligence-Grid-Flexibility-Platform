@@ -86,6 +86,7 @@ All endpoints are prefixed with `/api/v1`.
 | POST | `/organizations/:organizationId/meters/:meterId/readings` | Owner/admin/operator | Ingest up to 1,000 readings |
 | GET | `/organizations/:organizationId/meters/:meterId/readings` | Organization member | Query readings with optional `from`, `to`, `page`, and `limit` |
 | GET | `/organizations/:organizationId/analytics/overview` | Organization member | Portfolio KPIs, daily usage, facility breakdown, and data-quality counts |
+| GET | `/organizations/:organizationId/analytics/intelligence` | Organization member | Explainable energy forecast and meter-level consumption anomaly detection |
 
 ### Facility example
 
@@ -150,6 +151,15 @@ The authenticated dashboard includes an asset-operations workspace with three vi
 - **Energy readings:** inspect the latest 20 readings for a selected meter and submit a manual reading with timestamp, kWh, optional kW demand and power factor, source, and quality metadata.
 
 Create and ingestion controls are shown to owner, admin, and operator members. The API remains authoritative for permissions; read-only roles can browse inventory and readings. Each manual reading receives a unique event ID so retries are safe under the server's idempotent ingestion contract. The workspace refreshes its inventory and reading list after successful writes.
+### Energy forecasting and anomaly intelligence
+
+`GET /organizations/:organizationId/analytics/intelligence?historyDays=30&horizonDays=7` returns an organization-scoped forecast and unusual-consumption candidates. `historyDays` is bounded to 7–90 days and `horizonDays` to 1–14 days.
+
+- **Forecast:** seven-day moving-average baseline with a linear trend fitted to up to fourteen observed daily totals. The daily trend is capped at 15% of the baseline. Lower/upper bands are heuristic uncertainty ranges, not calibrated statistical confidence intervals.
+- **Anomalies:** daily meter totals are compared with up to fourteen preceding observed days using a rolling median and median absolute deviation (MAD). At least seven prior observations are required. High/medium severity and baseline/threshold/deviation values are returned for explainability.
+- **Data quality:** valid and estimated readings are included; flagged readings are excluded. The response includes the selected history window and methodology.
+
+This first intelligence release is deterministic and explainable. It is not a trained machine-learning model, does not claim probabilistic forecast accuracy, and does not automatically control equipment. Anomaly candidates should be reviewed against operational context before action.
 ### Tenant and role controls
 
 Every facility, meter, and reading query is scoped to the organization resolved from the authenticated user's active membership. A meter can only be registered against a facility in that same organization. The organization ID in the URL is a lookup context, never proof of access.
