@@ -70,7 +70,7 @@ export async function ingestGatewayEvents({ source, events }) {
     return { updateOne: {
       filter: { organization: source.organization, meter: meterId, externalId: event.eventId },
       update: { $setOnInsert: {
-        organization: source.organization, facility: undefined,
+        organization: source.organization,
         meter: meterId, externalId: event.eventId, recordedAt: new Date(event.recordedAt),
         energyKwh: event.energyKwh, demandKw: event.demandKw, voltageV: event.voltageV,
         currentA: event.currentA, powerFactor: event.powerFactor, quality: event.quality,
