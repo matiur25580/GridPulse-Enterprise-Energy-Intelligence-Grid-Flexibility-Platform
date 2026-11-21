@@ -86,7 +86,7 @@ All endpoints are prefixed with `/api/v1`.
 | POST | `/organizations/:organizationId/meters/:meterId/readings` | Owner/admin/operator | Ingest up to 1,000 readings |
 | GET | `/organizations/:organizationId/meters/:meterId/readings` | Organization member | Query readings with optional `from`, `to`, `page`, and `limit` |
 | GET | `/organizations/:organizationId/analytics/overview` | Organization member | Portfolio KPIs, daily usage, facility breakdown, and data-quality counts |
-| GET | `/organizations/:organizationId/analytics/intelligence` | Organization member | Explainable energy forecast and meter-level consumption anomaly detection |
+| GET | `/organizations/:organizationId/analytics/intelligence` | Organization member | Explainable energy forecast and meter-level consumption anomaly detection |\n| POST | `/organizations/:organizationId/optimization/simulate` | Organization member | Simulate tariff-aware load shifting and battery dispatch against observed hourly energy data |
 
 ### Facility example
 
@@ -160,6 +160,13 @@ Create and ingestion controls are shown to owner, admin, and operator members. T
 - **Data quality:** valid and estimated readings are included; flagged readings are excluded. The response includes the selected history window and methodology. A rolling-origin one-day-ahead backtest reports MAE, RMSE, MAPE, WAPE and mean error/bias, with actual-versus-predicted points and facility-level metrics. Only contiguous observed daily points are evaluated; each prediction uses strictly earlier observations. MAPE excludes zero-actual days. At least eight consecutive daily observations are needed for an initial score. Metrics describe historical performance and do not guarantee future accuracy. A rolling-origin one-day-ahead backtest reports MAE, RMSE, MAPE, WAPE, mean error/bias, actual-versus-predicted points, and facility-level metrics. Backtesting evaluates only contiguous observed days and uses strictly prior observations for each prediction; MAPE excludes zero-actual days. A minimum of eight consecutive daily observations is required for the first score. Metrics are descriptive and should not be interpreted as guaranteed future performance.
 
 This first intelligence release is deterministic and explainable. It is not a trained machine-learning model, does not claim probabilistic forecast accuracy, and does not automatically control equipment. Anomaly candidates should be reviewed against operational context before action.
+
+### Energy optimization and flexibility scenarios
+
+`POST /organizations/:organizationId/optimization/simulate` runs an organization-scoped, read-only planning scenario using the previous 7–90 days of valid and estimated telemetry. The request supplies off-peak and peak tariff rates, peak hours (UTC), and optional battery capacity, power, state-of-charge, reserve, and round-trip efficiency. The response compares representative-day baseline and optimized cost/energy/peak demand, provides estimated savings and a 24-hour dispatch schedule, and returns data coverage plus explicit model assumptions.
+
+The simulator averages observed daily energy by UTC hour, shifts battery charging into configured off-peak hours, and dispatches stored energy during peak hours subject to capacity, power, reserve, and efficiency limits. If demand measurements are absent, hourly energy is used as an indicative average-kW proxy and disclosed in the response. It does not infer utility tariff rules, demand charges, taxes, battery degradation, or local-time daylight-saving behavior. Results are indicative scenario estimates, not guaranteed savings or an operational dispatch plan. No commands are sent to meters, batteries, or grid equipment.
+
 ### Tenant and role controls
 
 Every facility, meter, and reading query is scoped to the organization resolved from the authenticated user's active membership. A meter can only be registered against a facility in that same organization. The organization ID in the URL is a lookup context, never proof of access.
