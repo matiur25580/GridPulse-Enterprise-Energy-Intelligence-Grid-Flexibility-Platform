@@ -6,9 +6,12 @@ export function evaluateGridFlexibility(hourlyProfile, input) {
     const point = hourlyProfile.find((item) => item.hour === hour)
     const loadKwh = Math.max(0, Number(point?.loadKwh) || 0)
     const solarKwh = Math.max(0, Number(point?.solarKwh) || 0)
-    const solarSelfConsumedKwh = Math.min(loadKwh, solarKwh)
-    const gridImportKwh = Math.max(0, loadKwh - solarSelfConsumedKwh)
-    const estimatedExportKwh = Math.max(0, solarKwh - loadKwh)
+    const hasOverlap = Boolean(point?.observedLoad && point?.observedSolar)
+    const solarSelfConsumedKwh = hasOverlap ? Math.min(loadKwh, solarKwh) : 0
+    const solarGenerationWithLoadKwh = hasOverlap ? solarKwh : 0
+    const loadDuringSolarObservedKwh = hasOverlap ? loadKwh : 0
+    const gridImportKwh = point?.observedLoad ? Math.max(0, loadKwh - solarSelfConsumedKwh) : 0
+    const estimatedExportKwh = hasOverlap ? Math.max(0, solarKwh - loadKwh) : 0
     const isEvent = eventHours.has(hour)
     const demandResponseKwh = isEvent ? gridImportKwh * input.reductionPercent / 100 : 0
     return {
@@ -18,6 +21,8 @@ export function evaluateGridFlexibility(hourlyProfile, input) {
       loadKwh,
       solarGenerationKwh: solarKwh,
       solarSelfConsumedKwh,
+      solarGenerationWithLoadKwh,
+      loadDuringSolarObservedKwh,
       estimatedExportKwh,
       baselineGridImportKwh: gridImportKwh,
       demandResponseKwh,
@@ -29,6 +34,8 @@ export function evaluateGridFlexibility(hourlyProfile, input) {
   const sum = (key) => schedule.reduce((total, item) => total + item[key], 0)
   const generation = sum('solarGenerationKwh')
   const selfConsumed = sum('solarSelfConsumedKwh')
+  const solarGenerationWithLoad = sum('solarGenerationWithLoadKwh')
+  const loadDuringSolarObserved = sum('loadDuringSolarObservedKwh')
   const exports = sum('estimatedExportKwh')
   const gridImport = sum('baselineGridImportKwh')
   const curtailed = sum('demandResponseKwh')
@@ -38,8 +45,8 @@ export function evaluateGridFlexibility(hourlyProfile, input) {
   return {
     assumptions: {
       profile: 'average observed hourly energy by UTC hour across the selected history window',
-      load: input.loadSource === 'main' ? 'main meters used as facility load; solar meters treated as generation' : 'submeters used as a fallback load proxy because no main meters were observed; results may not represent whole-facility demand',
-      renewable: 'solar meter energy is treated as gross generation; self-consumption is estimated as the hourly minimum of load and solar generation',
+      load: input.loadSource === 'main' ? 'main meters used as facility load; when solar telemetry is absent, observed load is treated as grid import for that hour' : 'submeters used as a fallback load proxy because no main meters were observed; results may not represent whole-facility demand. When solar telemetry is absent, observed load is treated as grid import for that hour',
+      renewable: 'solar generation is reported from observed solar intervals; self-consumption and surplus export are estimated only for hours with both load and solar readings. Unmatched hours are excluded from those ratios.',
       export: 'surplus solar generation above hourly load is an estimated export proxy; no utility export meter is available in this calculation',
       demandResponse: 'event curtailment is modeled as a percentage reduction of baseline grid import during selected UTC hours; no flexibility asset is dispatched',
       emissions: 'avoided emissions use the user-supplied grid emissions factor and count estimated solar self-consumption plus modeled demand-response reduction',
@@ -49,8 +56,8 @@ export function evaluateGridFlexibility(hourlyProfile, input) {
       dailyGenerationKwh: round(generation),
       dailySelfConsumedKwh: round(selfConsumed),
       dailyEstimatedExportKwh: round(exports),
-      selfConsumptionPercent: generation > 0 ? round(selfConsumed / generation * 100, 2) : null,
-      solarCoveragePercent: sum('loadKwh') > 0 ? round(selfConsumed / sum('loadKwh') * 100, 2) : null,
+      selfConsumptionPercent: solarGenerationWithLoad > 0 ? round(selfConsumed / solarGenerationWithLoad * 100, 2) : null,
+      solarCoveragePercent: loadDuringSolarObserved > 0 ? round(selfConsumed / loadDuringSolarObserved * 100, 2) : null,
     },
     demandResponse: {
       eventHours: [...eventHours].sort((a, b) => a - b),
