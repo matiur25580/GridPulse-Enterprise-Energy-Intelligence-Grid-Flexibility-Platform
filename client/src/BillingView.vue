@@ -135,7 +135,7 @@ function exportCsv(bill: EnergyBill) {
   ]
   const csv = '\uFEFF' + rows.map((row) => row.map((value) => {
     let text = value == null ? '' : String(value)
-    if (typeof value === 'string' && ['=', '+', '-', '@', '\\t', '\\r'].some((prefix) => text.startsWith(prefix))) text = "'" + text
+    if (typeof value === 'string' && ['=', '+', '-', '@', '\t', '\r'].some((prefix) => text.startsWith(prefix))) text = "'" + text
     return '"' + text.replaceAll('"', '""') + '"'
   }).join(',')).join('\r\n')
   const url = URL.createObjectURL(new Blob([csv], { type: 'text/csv;charset=utf-8' }))
