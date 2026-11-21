@@ -98,6 +98,35 @@ export const intelligenceApi = {
     apiRequest<EnergyIntelligence>(`/organizations/${encodeURIComponent(organizationId)}/analytics/intelligence?historyDays=${historyDays}&horizonDays=${horizonDays}&backtestDays=${backtestDays}`),
 }
 
+
+export interface OptimizationScenarioInput {
+  historyDays: number
+  offPeakRatePerKwh: number
+  peakRatePerKwh: number
+  peakHours: number[]
+  batteryCapacityKwh: number
+  batteryPowerKw: number
+  initialSocPercent: number
+  reserveSocPercent: number
+  roundTripEfficiency: number
+}
+export interface OptimizationScenario {
+  generatedAt: string
+  range: { from: string; to: string; requestedDays: number }
+  dataCoverage: { hoursWithReadings: number; observedDays: number; readingQuality: string }
+  assumptions: Record<string, string>
+  baseline: { dailyEnergyKwh: number; dailyCost: number; peakDemandKw: number }
+  optimized: { dailyGridEnergyKwh: number; dailyCost: number; peakDemandKw: number; batteryChargeKwh: number; batteryDischargeKwh: number; endingStateOfChargeKwh: number }
+  impact: { dailyCostSavings: number; costSavingsPercent: number | null; peakReductionKw: number; peakReductionPercent: number | null }
+  schedule: Array<{ hourUtc: number; baselineEnergyKwh: number; gridEnergyKwh: number; chargeKwh: number; dischargeKwh: number; tariffRate: number; period: 'peak' | 'off-peak' }>
+}
+export const optimizationApi = {
+  simulate: (organizationId: string, input: OptimizationScenarioInput) =>
+    apiRequest<OptimizationScenario>(`/organizations/${encodeURIComponent(organizationId)}/optimization/simulate`, {
+      method: 'POST', body: JSON.stringify(input),
+    }),
+}
+
 export interface User { id: string; name: string; email: string }
 export interface Organization { id: string; name: string; slug: string; role: string }
 export interface EnergyOverview {
