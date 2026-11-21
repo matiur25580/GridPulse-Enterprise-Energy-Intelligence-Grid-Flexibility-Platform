@@ -498,7 +498,12 @@ The exact service commands vary by operating system and MongoDB installation met
 | COOKIE_SECURE | No | false locally | Secure cookie flag; enabled automatically in production |
 | INTEGRATION_ENCRYPTION_KEY | Gateway feature | Generate with OpenSSL | Persistent key used to derive the AES-256-GCM gateway-secret encryption key |
 | ALERT_EVALUATION_INTERVAL_SECONDS | No | 300 | Scheduled alert interval; set to 0 to disable |
-| ALERT_EVALUATION_LEASE_SECONDS | No | 180 | Distributed worker lease duration; renewed while a batch is running |\n| ALERT_NOTIFICATION_INTERVAL_SECONDS | No | 15 | Incident email outbox polling cadence; 0 disables delivery |\n| RESEND_API_KEY | Optional | — | Resend API key for incident email delivery |\n| ALERT_EMAIL_FROM | Optional | — | Verified Resend sender identity |\n| DEMO_SEED_EMAIL | Demo only | demo@gridpulse.local | Seed account email; does not affect normal runtime |\n| DEMO_SEED_PASSWORD | Demo only | Set explicitly | Local/demo seed account password; never use a production credential |
+| ALERT_EVALUATION_LEASE_SECONDS | No | 180 | Distributed worker lease duration; renewed while a batch is running |
+| ALERT_NOTIFICATION_INTERVAL_SECONDS | No | 15 | Incident email outbox polling cadence; 0 disables delivery |
+| RESEND_API_KEY | Optional | — | Resend API key for incident email delivery |
+| ALERT_EMAIL_FROM | Optional | — | Verified Resend sender identity |
+| DEMO_SEED_EMAIL | Demo only | demo@gridpulse.local | Seed account email; does not affect normal runtime |
+| DEMO_SEED_PASSWORD | Demo only | Set explicitly | Local/demo seed account password; never use a production credential |
 
 **Production requirements:** use strong independently generated secrets, HTTPS, a secure cookie domain/configuration, restricted CORS origins, managed MongoDB backups, and secret-manager storage. The gateway encryption key must remain stable across deployments and be backed up securely.
 
@@ -886,7 +891,7 @@ GridPulse is an ambitious portfolio implementation, but the following boundaries
 
 | Priority | Next capability | Why it matters |
 |---|---|---|
-| P0 | Seeded demo environment and real browser-captured screenshots | Implemented: deterministic synthetic tenant, idempotent telemetry seed, and Playwright artifact workflow. |
+| P0 | Seeded demo environment and real browser-captured screenshots | Seed and Playwright artifact workflow implemented; the first successful workflow run and screenshot review are still required before calling the generated gallery verified. |
 | P0 | Database-backed integration tests and tenant-isolation tests | Validates real MongoDB behavior beyond pure unit tests. |
 | P1 | Email outbox with Resend delivery adapter | Implemented for incident open/recovery/resolution; collaboration-channel adapters remain future work. |
 | P1 | Escalation policies, maintenance windows, and alert suppression | Reduces noise and improves operational workflows. |
