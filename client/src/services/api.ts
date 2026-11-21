@@ -91,7 +91,7 @@ export interface EnergyIntelligence {
   facilityBacktests: Array<ForecastBacktest & { facilityId: string; facility: { name: string; code: string } | null }>
   anomalies: EnergyAnomaly[]
   anomalySummary: { count: number; high: number; medium: number }
-  dataQuality: { included: string; excluded: string; historyDays: number; horizonDays: number }
+  dataQuality: { included: string; excluded: string; historyDays: number; horizonDays: number; backtestDays: number }
 }
 export const intelligenceApi = {
   overview: (organizationId: string, historyDays = 30, horizonDays = 7, backtestDays = 14) =>
