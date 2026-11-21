@@ -152,6 +152,23 @@ export const gridFlexibilityApi = {
     }),
 }
 
+
+export interface EnergyReport {
+  organization: { id: string; name: string }
+  generatedAt: string
+  range: { from: string; to: string; timezone: string; dayCount: number }
+  summary: { totalEnergyKwh: number; averageDailyEnergyKwh: number; peakDemandKw: number | null; averagePowerFactor: number | null; includedReadings: number; estimatedReadings: number; flaggedReadings: number; excludedFlaggedEnergyKwh: number; estimatedEmissionsKgCo2e: number }
+  emissions: { gridEmissionFactorKgPerKwh: number; estimatedKgCo2e: number; methodology: string }
+  dataQuality: { included: string; flagged: string; byQuality: Record<string, { readingCount: number; energyKwh: number }> }
+  daily: Array<{ date: string; energyKwh: number; peakDemandKw: number | null; readingCount: number }>
+  facilities: Array<{ facilityId: string; name: string; code: string; energyKwh: number; peakDemandKw: number | null; readingCount: number }>
+  meters: Array<{ meterId: string; meterName: string; serialNumber: string; meterType: string; quality: string; energyKwh: number; readingCount: number }>
+}
+export const reportingApi = {
+  energy: (organizationId: string, from: string, to: string, gridEmissionFactorKgPerKwh = 0.4) =>
+    apiRequest<EnergyReport>(`/organizations/${encodeURIComponent(organizationId)}/reports/energy?from=${encodeURIComponent(from)}&to=${encodeURIComponent(to)}&gridEmissionFactorKgPerKwh=${gridEmissionFactorKgPerKwh}`),
+}
+
 export interface User { id: string; name: string; email: string }
 export interface Organization { id: string; name: string; slug: string; role: string }
 export interface EnergyOverview {
