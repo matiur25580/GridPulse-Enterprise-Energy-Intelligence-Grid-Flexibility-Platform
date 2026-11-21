@@ -155,7 +155,7 @@ function exportCsv(bill: EnergyBill) {
         <button v-if="canManage" type="button" @click="showTariffForm = !showTariffForm">{{showTariffForm ? 'Close tariff form' : '+ Create tariff version'}}</button>
       </div>
       <div v-if="showTariffForm && canManage" class="billing-tariff-form">
-        <div class="billing-form-title"><div><b>New tariff version</b><p>Rates are applied using the facility's local timezone. New versions cannot overlap existing active dates.</p></div></div>
+        <div class="billing-form-title"><div><b>New tariff version</b><p>Rates are applied using the facility's local timezone. A new later version automatically closes an open-ended previous version at the prior day.</p></div></div>
         <div class="billing-form-grid">
           <label>Tariff name<input v-model="name" maxlength="120"></label>
           <label>Currency<select v-model="currency"><option>INR</option><option>USD</option><option>EUR</option><option>GBP</option><option>AED</option><option>SGD</option><option>AUD</option><option>CAD</option><option>JPY</option></select></label>
