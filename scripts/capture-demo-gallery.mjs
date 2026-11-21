@@ -42,6 +42,14 @@ try {
   await page.locator('.alerts-workspace').waitFor({ state: 'visible' })
   await page.waitForTimeout(1800)
 
+  // Populate scenario and report panels through their real UI actions before capturing.
+  await page.getByRole('button', { name: /Run optimization scenario/ }).click()
+  await page.getByRole('button', { name: /Evaluate demand response/ }).click()
+  await page.getByRole('button', { name: /Generate report/ }).click()
+  await page.getByRole('button', { name: /Calculate estimate/ }).click()
+  await page.getByRole('button', { name: /Run evaluation/ }).click()
+  await page.waitForTimeout(1200)
+
   for (const [fileName, selector] of captures) {
     const section = page.locator(selector).first()
     await section.waitFor({ state: 'visible' })
