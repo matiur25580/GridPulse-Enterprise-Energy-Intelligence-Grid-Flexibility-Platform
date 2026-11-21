@@ -11,6 +11,7 @@ import { organizationApi, type EnergyOverview } from './services/api'
 import AssetsView from './AssetsView.vue'
 import IntelligenceView from './IntelligenceView.vue'
 import OptimizationView from './OptimizationView.vue'
+import GridFlexibilityView from './GridFlexibilityView.vue'
 use([CanvasRenderer, BarChart, LineChart, GridComponent, TooltipComponent])
 
 const auth = useAuthStore()
@@ -102,7 +103,7 @@ watch([activeOrganizationId, period, user], () => { if (user.value) void loadAna
       <p class="nav-caption">WORKSPACE</p>
       <div class="workspace"><span class="workspace-icon">{{ activeOrganization?.name?.slice(0,1) ?? 'G' }}</span><span><b>{{ activeOrganization?.name ?? 'Select organization' }}</b><small>{{ activeOrganization?.role ?? 'No role' }} workspace</small></span><select v-if="organizations.length > 1" v-model="activeOrganizationId" aria-label="Select organization"><option v-for="org in organizations" :key="org.id" :value="org.id">{{ org.name }}</option></select></div>
       <p class="nav-caption section-caption">ENERGY OPERATIONS</p>
-      <nav><a class="active" href="#"><span>◫</span>Overview</a><a href="#facilities"><span>⌂</span>Facilities</a><a href="#facilities"><span>◉</span>Meters</a><a href="#energy"><span>⌁</span>Energy data</a><a href="#intelligence"><span>↗</span>Demand intelligence</a><a href="#optimization"><span>⌁</span>Energy optimization</a></nav>
+      <nav><a class="active" href="#"><span>◫</span>Overview</a><a href="#facilities"><span>⌂</span>Facilities</a><a href="#facilities"><span>◉</span>Meters</a><a href="#energy"><span>⌁</span>Energy data</a><a href="#intelligence"><span>↗</span>Demand intelligence</a><a href="#optimization"><span>⌁</span>Energy optimization</a><a href="#grid-flexibility"><span>☀</span>Renewables &amp; grid services</a></nav>
       <div class="sidebar-bottom"><div class="system-status"><i></i><span><b>Secure session active</b><small>{{ activeOrganization?.role ?? 'Member' }} access</small></span></div><div class="profile"><span class="avatar">{{ user.name.slice(0,2).toUpperCase() }}</span><span><b>{{ user.name }}</b><small>{{ user.email }}</small></span><button class="logout" @click="signOut">Log out</button></div></div>
     </aside>
     <section class="main">
@@ -124,6 +125,7 @@ watch([activeOrganizationId, period, user], () => { if (user.value) void loadAna
         </section>
         <IntelligenceView id="intelligence" :organization-id="activeOrganizationId" />
         <OptimizationView id="optimization" :organization-id="activeOrganizationId" />
+        <GridFlexibilityView id="grid-flexibility" :organization-id="activeOrganizationId" />
         <AssetsView id="facilities" :organization-id="activeOrganizationId" :role="activeOrganization?.role ?? ''" />
         <footer>GRIDPULSE <span>· ENTERPRISE ENERGY INTELLIGENCE</span><small>{{ activeOrganization?.name }} · {{ lastUpdated ? 'Updated ' + lastUpdated : 'Awaiting data' }} · <button @click="loadAnalytics">Refresh</button> · <button @click="signOut">Sign out</button></small></footer>
       </div>
