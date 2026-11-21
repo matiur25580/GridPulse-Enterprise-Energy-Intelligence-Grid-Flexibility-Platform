@@ -5,7 +5,7 @@ import { authorize, requireOrganization } from '../middleware/authorize.js'
 import { validate } from '../middleware/validate.js'
 import {
   organizationBillingParamsSchema, tariffParamsSchema, billParamsSchema,
-  createTariffSchema, estimateBillSchema, listBillsQuerySchema,
+  createTariffSchema, estimateBillSchema, listBillsQuerySchema, listTariffsQuerySchema,
 } from '../schemas/billing.schema.js'
 
 const router = Router()
@@ -14,7 +14,7 @@ router.use(authenticate)
 router.get('/:organizationId/billing/tariffs',
   validate(organizationBillingParamsSchema, 'params'), requireOrganization,
   authorize('owner', 'admin', 'operator', 'analyst', 'viewer'),
-  getTariffs,
+  validate(listTariffsQuerySchema, 'query'), getTariffs,
 )
 router.post('/:organizationId/billing/tariffs',
   validate(organizationBillingParamsSchema, 'params'), requireOrganization,
