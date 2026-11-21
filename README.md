@@ -783,7 +783,7 @@ A workflow being configured is not proof that a particular commit passed. Check 
 
 ### Current verification note
 
-The repository changes in this milestone were committed through GitHub's repository integration. A local checkout could not be created in the execution environment because github.com DNS resolution failed, so the complete test suite and frontend production build were not executed during this update. Treat the next successful GitHub Actions run as the required verification gate.
+The repository changes in this milestone were committed through GitHub's repository integration. The execution environment could not create a local checkout because github.com DNS resolution failed, so local commands were unavailable. GitHub Actions is the authoritative verification gate for the committed source; review the latest run on the Actions tab and require both backend tests and the frontend production build to pass before release.
 
 ---
 
