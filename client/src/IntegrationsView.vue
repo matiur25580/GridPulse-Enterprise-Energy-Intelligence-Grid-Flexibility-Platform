@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { computed, onMounted, ref, watch } from 'vue'
-import { apiRequest, billingApi, integrationsApi, type BillingFacility, type MeterImportBatch, type TariffPlan, type UtilityInvoice } from './services/api'
+import { apiRequest, billingApi, gatewayApi, integrationsApi, type BillingFacility, type GatewaySource, type MeterImportBatch, type TariffPlan, type UtilityInvoice } from './services/api'
 
 const props = defineProps<{ organizationId: string; role: string }>()
 type MeterOption = { _id: string; name: string; serialNumber: string; status: string; facility: string | { _id: string } }
@@ -9,6 +9,14 @@ const meters = ref<MeterOption[]>([])
 const tariffs = ref<TariffPlan[]>([])
 const batches = ref<MeterImportBatch[]>([])
 const invoices = ref<UtilityInvoice[]>([])
+const gateways = ref<GatewaySource[]>([])
+const gatewayName = ref('')
+const externalMeterId = ref('')
+const expectedInterval = ref(15)
+const gatewaySecret = ref('')
+const gatewaySecretSourceId = ref('')
+const gatewayCreating = ref(false)
+const gatewayActionId = ref('')
 const meterId = ref('')
 const facilityId = ref('')
 const tariffId = ref('')
@@ -38,21 +46,25 @@ const money = (value: number, code: string) => {
   catch { return code + ' ' + value.toFixed(2) }
 }
 const varianceClass = (invoice: UtilityInvoice) => invoice.reconciliation.status === 'within_tolerance' ? 'integration-good' : 'integration-warn'
+const gatewayHealthClass = (gateway: GatewaySource) => gateway.health === 'healthy' ? 'integration-good' : gateway.health === 'disabled' ? '' : 'integration-warn'
+const gatewayWebhookUrl = (gateway: GatewaySource) => `${window.location.origin}/api/v1/integrations/gateways/${gateway._id}/readings`
 
 async function loadWorkspace() {
   if (!props.organizationId) return
   loading.value = true; error.value = ''
   try {
-    const [facilityData, meterData, batchData, invoiceData] = await Promise.all([
+    const [facilityData, meterData, batchData, invoiceData, gatewayData] = await Promise.all([
       billingApi.facilities(props.organizationId),
       apiRequest<MeterOption[]>(`/organizations/${encodeURIComponent(props.organizationId)}/meters`),
       integrationsApi.imports(props.organizationId),
       integrationsApi.invoices(props.organizationId),
+      gatewayApi.list(props.organizationId),
     ])
     facilities.value = facilityData
     meters.value = meterData
     batches.value = batchData
     invoices.value = invoiceData
+    gateways.value = gatewayData
     if (!facilityId.value || !facilities.value.some((item) => item._id === facilityId.value)) facilityId.value = facilities.value[0]?._id ?? ''
     if (!meterId.value || !meters.value.some((item) => item._id === meterId.value)) meterId.value = meters.value.find((item) => item.status === 'active')?._id ?? ''
     await loadFacilityTariffs()
@@ -65,7 +77,7 @@ async function loadFacilityTariffs() {
   if (!tariffs.value.some((item) => item._id === tariffId.value)) tariffId.value = tariffs.value.find((item) => item.status === 'active')?._id ?? ''
 }
 watch(() => props.organizationId, () => {
-  facilities.value = []; meters.value = []; tariffs.value = []; batches.value = []; invoices.value = []
+  facilities.value = []; meters.value = []; tariffs.value = []; batches.value = []; invoices.value = []; gateways.value = []; gatewaySecret.value = ''
   meterId.value = ''; facilityId.value = ''; tariffId.value = ''; latestReconciliation.value = null
   void loadWorkspace()
 })
@@ -115,6 +127,51 @@ async function submitImport() {
   } catch (cause) { error.value = cause instanceof Error ? cause.message : 'CSV import failed.' }
   finally { importing.value = false }
 }
+
+async function createGateway() {
+  error.value = ''; success.value = ''; gatewaySecret.value = ''
+  if (!gatewayName.value.trim() || !meterId.value || !externalMeterId.value.trim()) { error.value = 'Enter a gateway name, select an active meter and provide its external meter ID.'; return }
+  gatewayCreating.value = true
+  try {
+    const result = await gatewayApi.create(props.organizationId, {
+      name: gatewayName.value.trim(), expectedIntervalMinutes: expectedInterval.value,
+      meterMappings: [{ externalMeterId: externalMeterId.value.trim(), meterId: meterId.value }],
+    })
+    gateways.value = [result.source, ...gateways.value]
+    gatewaySecret.value = result.signingSecret
+    gatewaySecretSourceId.value = result.source._id
+    success.value = 'Gateway provisioned. Copy and store its signing secret now; it cannot be retrieved later.'
+    gatewayName.value = ''; externalMeterId.value = ''
+  } catch (cause) { error.value = cause instanceof Error ? cause.message : 'Unable to provision gateway.' }
+  finally { gatewayCreating.value = false }
+}
+async function rotateGateway(gateway: GatewaySource) {
+  error.value = ''; success.value = ''
+  gatewayActionId.value = gateway._id
+  try {
+    const result = await gatewayApi.rotateSecret(props.organizationId, gateway._id)
+    gateways.value = gateways.value.map((item) => item._id === gateway._id ? result.source : item)
+    gatewaySecret.value = result.signingSecret
+    gatewaySecretSourceId.value = gateway._id
+    success.value = 'Signing secret rotated. Update the gateway immediately; the previous secret is no longer accepted.'
+  } catch (cause) { error.value = cause instanceof Error ? cause.message : 'Unable to rotate gateway secret.' }
+  finally { gatewayActionId.value = '' }
+}
+async function toggleGateway(gateway: GatewaySource) {
+  error.value = ''
+  gatewayActionId.value = gateway._id
+  try {
+    const updated = await gatewayApi.setStatus(props.organizationId, gateway._id, gateway.status === 'active' ? 'disabled' : 'active')
+    gateways.value = gateways.value.map((item) => item._id === gateway._id ? updated : item)
+  } catch (cause) { error.value = cause instanceof Error ? cause.message : 'Unable to update gateway status.' }
+  finally { gatewayActionId.value = '' }
+}
+async function copyGatewaySecret() {
+  if (!gatewaySecret.value) return
+  try { await navigator.clipboard.writeText(gatewaySecret.value); success.value = 'Signing secret copied to clipboard.' }
+  catch { error.value = 'Clipboard access is unavailable. Select and copy the secret manually.' }
+}
+
 async function submitReconciliation() {
   error.value = ''; success.value = ''; latestReconciliation.value = null
   if (!facilityId.value || !tariffId.value || !invoiceNumber.value.trim() || !supplier.value.trim()) { error.value = 'Complete the facility, tariff, invoice number and supplier fields.'; return }
