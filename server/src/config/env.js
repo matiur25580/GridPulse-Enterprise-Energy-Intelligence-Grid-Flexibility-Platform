@@ -9,6 +9,8 @@ const schema = z.object({
   MONGODB_URI: z.string().min(1, 'MONGODB_URI is required'),
   JWT_ACCESS_SECRET: z.string().min(32, 'JWT_ACCESS_SECRET must contain at least 32 characters'),
   INTEGRATION_ENCRYPTION_KEY: z.string().min(32, 'INTEGRATION_ENCRYPTION_KEY must contain at least 32 characters').optional(),
+  ALERT_EVALUATION_INTERVAL_SECONDS: z.coerce.number().int().min(0).max(3600).default(300),
+  ALERT_EVALUATION_LEASE_SECONDS: z.coerce.number().int().min(60).max(7200).default(180),
   ACCESS_TOKEN_TTL: z.string().default('15m'),
   REFRESH_TOKEN_TTL_DAYS: z.coerce.number().int().positive().max(90).default(30),
   COOKIE_SECURE: z.string().default('false'),
