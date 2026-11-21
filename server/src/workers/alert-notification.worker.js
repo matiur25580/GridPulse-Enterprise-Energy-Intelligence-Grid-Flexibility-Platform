@@ -85,6 +85,10 @@ export function runAlertNotificationBatch() {
 
 export function startAlertNotificationWorker() {
   if (timer || env.ALERT_NOTIFICATION_INTERVAL_SECONDS === 0) return
+  if (!env.RESEND_API_KEY || !env.ALERT_EMAIL_FROM) {
+    console.info('GridPulse email delivery is disabled until RESEND_API_KEY and ALERT_EMAIL_FROM are configured')
+    return
+  }
   timer = setInterval(() => {
     runAlertNotificationBatch().catch(error => console.error('GridPulse notification worker failed:', error))
   }, env.ALERT_NOTIFICATION_INTERVAL_SECONDS * 1000)
