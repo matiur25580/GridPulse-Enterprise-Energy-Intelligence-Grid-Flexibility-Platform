@@ -1,5 +1,6 @@
 import mongoose from 'mongoose'
 
+// Store validated, tenant-linked meter observations and index common time-series and deduplication lookups.
 const energyReadingSchema = new mongoose.Schema({
   organization: { type: mongoose.Schema.Types.ObjectId, ref: 'Organization', required: true },
   facility: { type: mongoose.Schema.Types.ObjectId, ref: 'Facility', required: true },
