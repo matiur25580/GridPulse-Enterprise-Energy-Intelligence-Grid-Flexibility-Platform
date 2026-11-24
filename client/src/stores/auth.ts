@@ -11,6 +11,7 @@ export const useAuthStore = defineStore('auth', () => {
   const error = ref('')
   const activeOrganization = computed(() => organizations.value.find((item) => item.id === activeOrganizationId.value) ?? null)
 
+  // Refresh the signed-in profile and organization list, retaining the active tenant when it still exists.
   async function loadProfile() {
     const [profile, list] = await Promise.all([authApi.me(), organizationApi.list()])
     user.value = profile.user
