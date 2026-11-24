@@ -2,6 +2,7 @@ import { EnergyReading } from '../models/energy-reading.model.js'
 import { evaluateGridFlexibility } from '../services/grid-flexibility.service.js'
 import { asyncHandler } from '../utils/async-handler.js'
 
+// Build an hourly load/solar profile from this organization's accepted meter readings before simulation.
 export const runGridFlexibilityScenario = asyncHandler(async (request, response) => {
   const now = new Date()
   const { historyDays, ...scenario } = request.body
