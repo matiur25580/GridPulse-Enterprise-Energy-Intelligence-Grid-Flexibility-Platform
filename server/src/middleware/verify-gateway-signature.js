@@ -8,6 +8,7 @@ import { AppError } from '../utils/app-error.js'
 import { asyncHandler } from '../utils/async-handler.js'
 import { decryptGatewaySecret, gatewaySignature, safeSignatureEqual } from '../utils/gateway-security.js'
 
+// Authenticate gateway messages with a time-bounded signature and replay protection before ingestion.
 export const verifyGatewaySignature = asyncHandler(async (request, _response, next) => {
   if (!mongoose.isValidObjectId(request.params.sourceId)) throw new AppError('Gateway source not found.', 404, 'GATEWAY_SOURCE_NOT_FOUND')
   const source = await GatewaySource.findById(request.params.sourceId).select('+secretCiphertext +secretIv +secretTag')
