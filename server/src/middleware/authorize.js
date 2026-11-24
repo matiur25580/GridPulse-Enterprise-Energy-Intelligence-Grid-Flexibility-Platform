@@ -3,6 +3,7 @@ import { Membership } from '../models/membership.model.js'
 import { AppError } from '../utils/app-error.js'
 import { asyncHandler } from '../utils/async-handler.js'
 
+// Resolve organization access from the authenticated user's active membership, not from the request header alone.
 export const requireOrganization = asyncHandler(async (request, _response, next) => {
   const organizationId = request.params.organizationId ?? request.headers['x-organization-id']
   if (!organizationId) throw new AppError('An organization context is required.', 400, 'ORGANIZATION_REQUIRED')
