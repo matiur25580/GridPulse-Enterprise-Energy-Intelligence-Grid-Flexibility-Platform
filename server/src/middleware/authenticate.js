@@ -4,6 +4,7 @@ import { AppError } from '../utils/app-error.js'
 import { asyncHandler } from '../utils/async-handler.js'
 import { User } from '../models/user.model.js'
 
+// Verify the access token, then confirm the referenced account is still active before trusting it.
 export const authenticate = asyncHandler(async (request, _response, next) => {
   const header = request.headers.authorization
   if (!header?.startsWith('Bearer ')) throw new AppError('Authentication is required.', 401, 'UNAUTHENTICATED')
