@@ -8,6 +8,7 @@ const startOfDay = (date) => {
   return value
 }
 
+// Aggregate overview metrics within the authenticated organization's requested UTC date range.
 export async function getEnergyOverview(request, response) {
   const organization = request.organization._id
   const now = new Date()
