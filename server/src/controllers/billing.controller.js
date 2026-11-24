@@ -16,6 +16,7 @@ export const getTariffs = asyncHandler(async (request, response) => {
   response.json({ data: tariffs })
 })
 
+// Delegate tariff-based bill estimation while explicitly carrying tenant and actor context into the service.
 export const estimateBill = asyncHandler(async (request, response) => {
   const bill = await estimateAndSaveBill({ organizationId: organizationId(request), userId: request.user.id, input: request.body })
   response.status(201).json({ data: bill })
